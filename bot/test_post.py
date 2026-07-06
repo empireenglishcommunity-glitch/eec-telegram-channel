@@ -7,7 +7,6 @@ from telethon.tl.functions.messages import SendReactionRequest
 import config
 from content_engine import generate_post, get_bank_post
 from image_engine import generate_image
-from engagement_engine import seed_discussion_group
 
 
 async def main():
@@ -31,12 +30,9 @@ async def main():
 
     # Generate content
     print("Generating post...")
-    post_text = await generate_post(pillar)
+    post_text, metadata = await generate_post(pillar)
     if not post_text:
-        print("AI failed, using bank...")
-        post_text = await get_bank_post(pillar)
-    if not post_text:
-        print("No content available!")
+        print("No content available! Make sure data/bank/ has JSON files.")
         await client.disconnect()
         return
 
@@ -47,7 +43,7 @@ async def main():
 
     # Generate image
     print("Generating image...")
-    image_path = await generate_image(pillar, post_text)
+    image_path = await generate_image(pillar, post_text, metadata)
 
     # Post to channel
     print("Posting to channel...")

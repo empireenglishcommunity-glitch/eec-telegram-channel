@@ -51,18 +51,17 @@ async def daily_post():
     print(f"[{datetime.now()}] Daily post — pillar: {pillar}")
 
     try:
-        # 1. Generate content (AI or bank fallback)
-        post_text = await generate_post(pillar)
+        # 1. Generate content (from bank)
+        post_text, metadata = await generate_post(pillar)
         if not post_text:
-            print("  ⚠️ AI generation failed — using bank")
-            post_text = await get_bank_post(pillar)
+            post_text, metadata = await get_bank_post(pillar)
 
         if not post_text:
             print("  ❌ No content available — skipping today")
             return
 
-        # 2. Generate image
-        image_path = await generate_image(pillar, post_text)
+        # 2. Generate image (using HTML templates)
+        image_path = await generate_image(pillar, post_text, metadata)
 
         # 3. Post to channel
         channel = await get_channel()

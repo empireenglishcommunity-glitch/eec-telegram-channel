@@ -1,101 +1,194 @@
 """
-Image generation engine — uses Cloudflare Workers AI (FLUX.1 Schnell).
-Free tier: 10,000 neurons/day (we use ~1 image/day = well within limits).
+Image generation engine — uses HTML templates + HTML2IMG service.
+Produces consistent, branded Empire visuals for every post.
+
+Service: empire-html2img (Puppeteer) at http://localhost:3200/convert
+Output: 1080x1080 PNG, 2x device scale (2160x2160 actual pixels)
 """
 import aiohttp
-import config
 import os
 import random
+from templates.pillars import (
+    accent_lesson,
+    myth_destroyer,
+    system_reveal,
+    social_proof,
+    brand_story,
+    invitation,
+)
+import config
 
-# Image prompts per pillar — STRONG EMPIRE BRAND VISUALS
-# Style: Ultra-premium, gold on black, powerful, dominant, cinematic
-PILLAR_IMAGE_PROMPTS = {
-    "accent_lesson": [
-        "Cinematic close-up of golden sound waves emanating from a human mouth silhouette, deep black background, gold metallic particles, volumetric lighting, 8k quality, ultra premium luxury brand aesthetic, dramatic, powerful",
-        "Majestic golden microphone with sound waves rippling outward, matte black background, cinematic gold lighting, luxury brand photography, bokeh gold particles floating, epic dramatic atmosphere",
-        "Golden tongue and lips diagram glowing with energy, dark cinematic background with gold dust particles, premium educational brand, dramatic lighting, hyper-detailed, powerful",
-    ],
-    "myth_destroyer": [
-        "Dramatic golden hammer shattering a glass wall into a thousand pieces, matte black background, cinematic explosion of gold shards, volumetric lighting, epic powerful moment, 8k quality, luxury brand",
-        "Golden chains breaking apart with explosive force, dramatic dark background, sparks and gold particles flying, cinematic lighting, powerful liberation concept, ultra premium aesthetic",
-        "Massive golden fist punching through a dark wall, debris and gold particles exploding outward, volumetric god rays, cinematic dramatic moment, luxury brand photography, epic powerful",
-    ],
-    "system_reveal": [
-        "Futuristic golden holographic interface floating in dark space, circuit patterns and data streams in gold, black background, cinematic sci-fi aesthetic, premium technology brand, ultra detailed 8k",
-        "Majestic golden clockwork mechanism with interconnected gears, dark matte background, dramatic lighting revealing precision engineering, luxury brand aesthetic, cinematic, powerful",
-        "Golden neural network visualization with glowing nodes and connections, deep black space background, premium tech aesthetic, dramatic volumetric lighting, 8k ultra detailed",
-    ],
-    "social_proof": [
-        "Dramatic golden trophy on a pedestal with volumetric light beams streaming down, dark cinematic background, gold particles rising, victory and achievement concept, ultra premium luxury brand, epic",
-        "Golden arrow chart breaking through a ceiling with explosive force, dark background, gold sparks and particles, dramatic upward momentum, premium brand photography, powerful cinematic",
-        "Majestic golden crown floating with energy radiating outward, dark matte background, volumetric gold lighting, royalty and achievement, ultra premium luxury aesthetic, cinematic dramatic",
-    ],
-    "brand_story": [
-        "Epic golden empire gates slowly opening with blinding light streaming through, dark dramatic atmosphere, massive pillars, gold particles in the air, cinematic luxury brand, powerful royal aesthetic, 8k",
-        "Majestic golden lion head with flowing mane, dark cinematic background, volumetric gold lighting, power and authority symbol, ultra premium luxury brand, hyper-detailed, dramatic",
-        "Golden throne room with dramatic lighting, massive pillars, rich dark atmosphere, gold accents everywhere, empire and power aesthetic, cinematic luxury brand photography, epic scale",
-    ],
-}
+# HTML2IMG service URL (running on same server)
+HTML2IMG_URL = "http://localhost:3200/convert"
 
 
-async def generate_image(pillar: str, post_text: str = "") -> str | None:
-    """Generate a branded image for a channel post."""
-    if not config.CLOUDFLARE_ACCOUNT_ID or not config.CLOUDFLARE_API_TOKEN:
+async def generate_image(pillar: str, post_text: str = "", metadata: dict = None) -> str | None:
+    """Generate a branded image using HTML templates + HTML2IMG service."""
+
+    metadata = metadata or {}
+
+    # Build HTML from the appropriate template
+    html = _build_template(pillar, post_text, metadata)
+    if not html:
         return None
-
-    prompts = PILLAR_IMAGE_PROMPTS.get(pillar, PILLAR_IMAGE_PROMPTS["accent_lesson"])
-    prompt = random.choice(prompts)
 
     try:
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                f"https://api.cloudflare.com/client/v4/accounts/{config.CLOUDFLARE_ACCOUNT_ID}/ai/run/@cf/black-forest-labs/flux-1-schnell",
-                headers={
-                    "Authorization": f"Bearer {config.CLOUDFLARE_API_TOKEN}",
-                    "Content-Type": "application/json",
-                },
+                HTML2IMG_URL,
                 json={
-                    "prompt": prompt,
-                    "width": 1024,
-                    "height": 1024,
-                    "num_steps": 8,
+                    "html": html,
+                    "width": 1080,
+                    "height": 1080,
                 },
-                timeout=aiohttp.ClientTimeout(total=60),
+                timeout=aiohttp.ClientTimeout(total=30),
             ) as resp:
                 if resp.status == 200:
-                    content_type = resp.headers.get("Content-Type", "")
-                    output_path = f"data/temp_image_{random.randint(1000,9999)}.png"
-
-                    if "image/" in content_type:
-                        # Direct image bytes
-                        image_data = await resp.read()
-                        with open(output_path, "wb") as f:
-                            f.write(image_data)
-                    else:
-                        # JSON response with base64 image
-                        import base64
-                        data = await resp.json()
-                        if "result" in data and "image" in data["result"]:
-                            image_b64 = data["result"]["image"]
-                            image_data = base64.b64decode(image_b64)
-                            with open(output_path, "wb") as f:
-                                f.write(image_data)
-                        elif isinstance(data, dict) and "image" in data:
-                            image_b64 = data["image"]
-                            image_data = base64.b64decode(image_b64)
-                            with open(output_path, "wb") as f:
-                                f.write(image_data)
-                        else:
-                            print(f"  ⚠️ Unexpected response format: {str(data)[:200]}")
-                            return None
-
-                    print(f"  🖼️ Image generated: {output_path}")
+                    image_data = await resp.read()
+                    output_path = f"data/temp_image_{random.randint(1000, 9999)}.png"
+                    with open(output_path, "wb") as f:
+                        f.write(image_data)
+                    print(f"  🖼️ Image generated: {output_path} ({len(image_data)} bytes)")
                     return output_path
                 else:
                     error_text = await resp.text()
-                    print(f"  ⚠️ Cloudflare AI returned {resp.status}: {error_text[:200]}")
+                    print(f"  ⚠️ HTML2IMG returned {resp.status}: {error_text[:200]}")
                     return None
 
+    except aiohttp.ClientConnectorError:
+        print("  ⚠️ HTML2IMG service not reachable (is empire-html2img container running?)")
+        return None
     except Exception as e:
         print(f"  ⚠️ Image generation error: {e}")
         return None
+
+
+def _build_template(pillar: str, post_text: str, metadata: dict) -> str | None:
+    """Select the right template and fill it with content."""
+
+    if pillar == "accent_lesson":
+        topic = metadata.get("image_topic", _extract_english_topic(post_text))
+        examples = metadata.get("image_examples", _extract_examples(post_text))
+        return accent_lesson(topic, examples)
+
+    elif pillar == "myth_destroyer":
+        myth = metadata.get("image_myth", _extract_first_line(post_text))
+        return myth_destroyer(myth)
+
+    elif pillar == "system_reveal":
+        title = metadata.get("image_title", _extract_arabic_hook(post_text))
+        bullets = metadata.get("image_bullets", _extract_bullets(post_text))
+        return system_reveal(title, bullets)
+
+    elif pillar == "social_proof":
+        stat = metadata.get("image_stat", _extract_number(post_text))
+        label = metadata.get("image_label", _extract_arabic_hook(post_text))
+        return social_proof(stat, label)
+
+    elif pillar == "brand_story":
+        quote = metadata.get("image_quote", _extract_short_quote(post_text))
+        return brand_story(quote)
+
+    elif pillar == "invitation":
+        cta = metadata.get("image_cta", "ابدأ رحلتك دلوقتي")
+        subtitle = metadata.get("image_subtitle", "امتحان مجاني — ٢٠ دقيقة")
+        return invitation(cta, subtitle)
+
+    return None
+
+
+# ─── Text extraction helpers ─────────────────────────────────
+
+def _extract_english_topic(text: str) -> str:
+    """Extract English topic/sound name from post text."""
+    lines = text.split("\n")
+    for line in lines:
+        # Look for English words in the post (capitalized or technical)
+        stripped = line.strip()
+        if stripped and any(c.isascii() and c.isalpha() for c in stripped):
+            # Find the English part
+            words = stripped.split()
+            eng_words = [w for w in words if all(c.isascii() or c in "/-()'" for c in w) and len(w) > 1]
+            if eng_words:
+                return " ".join(eng_words[:4])
+    return "American English"
+
+
+def _extract_examples(text: str) -> list[str]:
+    """Extract example words/phrases from post."""
+    examples = []
+    for line in text.split("\n"):
+        stripped = line.strip()
+        if "=" in stripped and len(stripped) < 40:
+            examples.append(stripped)
+        elif stripped.startswith("✅") and len(stripped) < 40:
+            examples.append(stripped.replace("✅ ", ""))
+    return examples[:4] if examples else None
+
+
+def _extract_first_line(text: str) -> str:
+    """Get the first meaningful line (for myth text)."""
+    for line in text.split("\n"):
+        stripped = line.strip()
+        if stripped and not stripped.startswith("💣"):
+            # Remove the emoji prefix if any
+            for prefix in ["💣", "❌", "✅", "🔥", "🏛️", "👑", "📢", "🎯"]:
+                stripped = stripped.replace(prefix, "").strip()
+            if len(stripped) > 10:
+                return stripped[:60]
+    return "Myth"
+
+
+def _extract_arabic_hook(text: str) -> str:
+    """Extract the Arabic hook/title from the post."""
+    for line in text.split("\n"):
+        stripped = line.strip()
+        # Skip emoji-only lines and empty lines
+        if stripped and len(stripped) > 10:
+            # Remove leading emojis
+            for prefix in ["💣", "❌", "✅", "🔥", "🏛️", "👑", "📢", "🎯", "⚡"]:
+                stripped = stripped.replace(prefix, "").strip()
+            if any("\u0600" <= c <= "\u06FF" for c in stripped):
+                return stripped[:80]
+    return ""
+
+
+def _extract_bullets(text: str) -> list[str]:
+    """Extract bullet points from post."""
+    bullets = []
+    for line in text.split("\n"):
+        stripped = line.strip()
+        if stripped.startswith("•") or stripped.startswith("⚡"):
+            clean = stripped.lstrip("•⚡ ").strip()
+            if clean:
+                bullets.append(clean[:50])
+    return bullets[:5] if bullets else None
+
+
+def _extract_number(text: str) -> str:
+    """Extract a prominent number from the post."""
+    import re
+    # Look for numbers (Arabic or Western)
+    numbers = re.findall(r'[\d٠-٩]+[,.]?[\d٠-٩]*', text)
+    if numbers:
+        # Return the largest/most prominent one
+        return max(numbers, key=len)
+    return "🔥"
+
+
+def _extract_short_quote(text: str) -> str:
+    """Extract a short punchy quote for brand story."""
+    lines = text.split("\n")
+    # Look for short, punchy Arabic lines
+    for line in lines:
+        stripped = line.strip()
+        for prefix in ["💣", "❌", "✅", "🔥", "🏛️", "👑", "📢", "🎯", "⚡", "━━━"]:
+            stripped = stripped.replace(prefix, "").strip()
+        if stripped and 15 < len(stripped) < 80 and any("\u0600" <= c <= "\u06FF" for c in stripped):
+            return stripped
+    # Fallback: first Arabic line
+    for line in lines:
+        stripped = line.strip()
+        if any("\u0600" <= c <= "\u06FF" for c in stripped) and len(stripped) > 10:
+            return stripped[:70]
+    return "Empire English"
