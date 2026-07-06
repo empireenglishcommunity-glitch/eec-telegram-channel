@@ -9,8 +9,8 @@
 
 | Phase | Status | Notes |
 |-------|:------:|-------|
-| Phase A — Foundation | 🟡 IN PROGRESS | Plan created, repo initialized, docs written |
-| Phase B — Content Bank | ⬜ NOT STARTED | 30 posts to write |
+| Phase A — Foundation | ✅ COMPLETE | Channel description, pinned message, group rules, username options |
+| Phase B — Content Bank | 🟡 IN PROGRESS | 30 posts to write (starting now) |
 | Phase C — Automation | ⬜ NOT STARTED | Calendar + scheduling |
 | Phase D — Launch | ⬜ NOT STARTED | Go live |
 | Phase E — Operation | ⬜ NOT STARTED | Daily posting routine |
@@ -43,8 +43,8 @@
   - Health monitoring: Passive alerts, auto-recovery, never goes silent
   - Total cost: $0/month additional
 
-**Not Completed (Next Session):**
-- [ ] Phase A execution: channel description, pinned message, branding copy
+**Not Completed (Continue this session):**
+- [x] Phase A execution: channel description, pinned message, branding copy ✅
 - [ ] Phase B: write 30 evergreen posts (these become AI few-shot examples + bank fallback)
 
 ---
@@ -98,8 +98,10 @@
 | docs/04-IMPLEMENTATION-PLAN.md | Phase breakdown with tasks | ✅ Complete |
 | docs/05-DECISIONS.md | Locked design decisions | ✅ Complete |
 | docs/06-AUTOMATION-ENGINE.md | Full autopilot technical architecture | ✅ Complete |
-| content/pinned-message.md | Channel pinned post | ⬜ Not written |
-| content/channel-description.md | Channel bio/about | ⬜ Not written |
+| content/pinned-message.md | Channel pinned post | ✅ Complete |
+| content/channel-description.md | Channel bio/about | ✅ Complete |
+| content/channel-username.md | Username options (ranked) | ✅ Complete |
+| content/discussion-group-rules.md | Discussion group rules | ✅ Complete |
 | content/accent-lessons/ | 9 accent lesson posts | ⬜ Not written |
 | content/myth-destroyers/ | 6 myth destroyer posts | ⬜ Not written |
 | content/system-reveals/ | 6 system reveal posts | ⬜ Not written |
