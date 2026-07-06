@@ -7,32 +7,33 @@ import config
 import os
 import random
 
-# Image prompts per pillar
+# Image prompts per pillar — STRONG EMPIRE BRAND VISUALS
+# Style: Ultra-premium, gold on black, powerful, dominant, cinematic
 PILLAR_IMAGE_PROMPTS = {
     "accent_lesson": [
-        "Abstract sound wave visualization with gold (#D4AF37) particles on dark background (#0A0A0F). Professional educational feel. Mouth or tongue position hint. Square format.",
-        "Minimal gold (#D4AF37) waveform transforming shape on matte black (#0A0A0F) background. Premium educational aesthetic. No text. Square.",
-        "Gold (#D4AF37) particles forming speech pattern on dark (#0A0A0F) background. Professional, clean, abstract phonetics concept. Square.",
+        "Cinematic close-up of golden sound waves emanating from a human mouth silhouette, deep black background, gold metallic particles, volumetric lighting, 8k quality, ultra premium luxury brand aesthetic, dramatic, powerful",
+        "Majestic golden microphone with sound waves rippling outward, matte black background, cinematic gold lighting, luxury brand photography, bokeh gold particles floating, epic dramatic atmosphere",
+        "Golden tongue and lips diagram glowing with energy, dark cinematic background with gold dust particles, premium educational brand, dramatic lighting, hyper-detailed, powerful",
     ],
     "myth_destroyer": [
-        "Shattered glass or broken chains in gold (#D4AF37) on dark background (#0A0A0F). Freedom from wrong beliefs concept. Bold, powerful. Square.",
-        "Gold (#D4AF37) hammer striking a cracked surface on dark (#0A0A0F) background. Myth-breaking concept. Professional, dramatic. Square.",
-        "Explosion of gold (#D4AF37) shards on matte black (#0A0A0F). Breaking through barriers. Powerful, minimal, premium. Square.",
+        "Dramatic golden hammer shattering a glass wall into a thousand pieces, matte black background, cinematic explosion of gold shards, volumetric lighting, epic powerful moment, 8k quality, luxury brand",
+        "Golden chains breaking apart with explosive force, dramatic dark background, sparks and gold particles flying, cinematic lighting, powerful liberation concept, ultra premium aesthetic",
+        "Massive golden fist punching through a dark wall, debris and gold particles exploding outward, volumetric god rays, cinematic dramatic moment, luxury brand photography, epic powerful",
     ],
     "system_reveal": [
-        "Clean system diagram with gold (#D4AF37) connected nodes on dark background (#0A0A0F). Technology meets education. Professional network visualization. Square.",
-        "Gold (#D4AF37) gears and circuits on dark (#0A0A0F) background. System architecture concept. Premium, minimal, professional. Square.",
-        "Blueprint-style grid with gold (#D4AF37) highlights on dark (#0A0A0F) background. Engineering precision. Clean, professional. Square.",
+        "Futuristic golden holographic interface floating in dark space, circuit patterns and data streams in gold, black background, cinematic sci-fi aesthetic, premium technology brand, ultra detailed 8k",
+        "Majestic golden clockwork mechanism with interconnected gears, dark matte background, dramatic lighting revealing precision engineering, luxury brand aesthetic, cinematic, powerful",
+        "Golden neural network visualization with glowing nodes and connections, deep black space background, premium tech aesthetic, dramatic volumetric lighting, 8k ultra detailed",
     ],
     "social_proof": [
-        "Upward trending chart with gold (#D4AF37) gradient on dark background (#0A0A0F). Achievement and progress concept. Premium, celebratory. Square.",
-        "Gold (#D4AF37) trophy or star rising on dark (#0A0A0F) background. Success and achievement. Professional, aspirational. Square.",
-        "Growth visualization with gold (#D4AF37) ascending steps on dark (#0A0A0F). Progress milestone. Clean, motivational. Square.",
+        "Dramatic golden trophy on a pedestal with volumetric light beams streaming down, dark cinematic background, gold particles rising, victory and achievement concept, ultra premium luxury brand, epic",
+        "Golden arrow chart breaking through a ceiling with explosive force, dark background, gold sparks and particles, dramatic upward momentum, premium brand photography, powerful cinematic",
+        "Majestic golden crown floating with energy radiating outward, dark matte background, volumetric gold lighting, royalty and achievement, ultra premium luxury aesthetic, cinematic dramatic",
     ],
     "brand_story": [
-        "Crown or empire pillars in gold (#D4AF37) on matte black (#0A0A0F). Royal, powerful brand identity. Premium luxury feel. Square.",
-        "Golden (#D4AF37) gate opening with light streaming through on dark (#0A0A0F) background. Invitation to something exclusive. Square.",
-        "Gold (#D4AF37) lion or eagle silhouette on dark (#0A0A0F) background. Empire, power, authority. Minimal, premium. Square.",
+        "Epic golden empire gates slowly opening with blinding light streaming through, dark dramatic atmosphere, massive pillars, gold particles in the air, cinematic luxury brand, powerful royal aesthetic, 8k",
+        "Majestic golden lion head with flowing mane, dark cinematic background, volumetric gold lighting, power and authority symbol, ultra premium luxury brand, hyper-detailed, dramatic",
+        "Golden throne room with dramatic lighting, massive pillars, rich dark atmosphere, gold accents everywhere, empire and power aesthetic, cinematic luxury brand photography, epic scale",
     ],
 }
 
@@ -57,7 +58,7 @@ async def generate_image(pillar: str, post_text: str = "") -> str | None:
                     "prompt": prompt,
                     "width": 1024,
                     "height": 1024,
-                    "num_steps": 4,
+                    "num_steps": 8,
                 },
                 timeout=aiohttp.ClientTimeout(total=60),
             ) as resp:
