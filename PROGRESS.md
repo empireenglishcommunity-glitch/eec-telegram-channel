@@ -10,10 +10,13 @@
 | Phase | Status | Notes |
 |-------|:------:|-------|
 | Phase A — Foundation | ✅ COMPLETE | Channel description, pinned message, group rules, username options |
-| Phase B — Content Bank | 🟡 IN PROGRESS | 30 posts to write (starting now) |
-| Phase C — Automation | ⬜ NOT STARTED | Calendar + scheduling |
-| Phase D — Launch | ⬜ NOT STARTED | Go live |
-| Phase E — Operation | ⬜ NOT STARTED | Daily posting routine |
+| Phase B — Content Bank | 🟡 PARTIAL (9/33) | 9 Accent Lesson posts written. 21 remaining (myths, reveals, proof, stories, invitations) |
+| Phase C — Bot Development | ✅ COMPLETE | Full Telethon userbot written (setup_channel.py + main.py + all engines) |
+| Phase D — Server Deployment | ✅ COMPLETE | Cloned on Hetzner, venv created, deps installed, .env configured, Telegram authenticated |
+| Phase E — Channel Created | ✅ COMPLETE | setup_channel.py ran successfully — channel live on Telegram |
+| Phase F — Full Automation | ⬜ NOT STARTED | Run main.py as systemd service, verify daily posting works |
+| Phase G — Content Completion | ⬜ NOT STARTED | Write remaining 21 posts + populate JSON bank for AI fallback |
+| Phase H — Tune & Monitor | ⬜ NOT STARTED | Verify reactions, engagement, image gen all working in production |
 
 ---
 
@@ -43,21 +46,37 @@
   - Health monitoring: Passive alerts, auto-recovery, never goes silent
   - Total cost: $0/month additional
 
-**Not Completed (Continue this session):**
+**Also Completed This Session:**
 - [x] Phase A execution: channel description, pinned message, branding copy ✅
-- [ ] Phase B: write 30 evergreen posts (these become AI few-shot examples + bank fallback)
+- [x] Phase B partial: 9 Accent Lesson posts written (AL-01 to AL-09) ✅
+- [x] Full Telethon userbot developed (setup_channel.py, main.py, content_engine.py, image_engine.py, engagement_engine.py, config.py) ✅
+- [x] Server deployment: cloned, venv, deps installed, .env configured ✅
+- [x] Telegram API credentials obtained (api_id + api_hash from my.telegram.org) ✅
+- [x] Groq API key retrieved from existing server config ✅
+- [x] Cloudflare Account ID + API Token created ✅
+- [x] setup_channel.py executed — channel created and live on Telegram ✅
+
+**Not Completed (Next Session):**
+- [ ] Phase B remaining: write 21 more posts (6 myths, 6 system reveals, 5 social proof, 4 brand stories, 3 invitations)
+- [ ] Start main.py as systemd service (24/7 autopilot)
+- [ ] Verify first automated post goes out at 9 AM Dubai
+- [ ] Verify image generation works (Cloudflare Workers AI)
+- [ ] Verify reactions are applied naturally
+- [ ] Verify discussion group seeding works
+- [ ] Populate JSON bank with written posts for AI fallback
 
 ---
 
 ## Next Session Priority
 
-**Start with Phase A execution:**
-1. Write the Telegram channel description/bio (Arabic, brand voice)
-2. Write the pinned message (the channel "homepage" — funnel to bot/assessment)
-3. Set channel username (decide: @empireengclub or @empireenglishclub or other)
-4. Write discussion group rules
-5. Then Phase B: write 30 posts (these become both the bank AND few-shot examples for AI)
-6. Then Phase C+D: build the n8n automation workflows
+1. **Start the bot as systemd service** — `systemctl enable eec-channel-bot && systemctl start eec-channel-bot`
+2. **Verify first automated post** — wait for 9 AM Dubai or trigger manually for testing
+3. **Write remaining 21 posts** — myths, system reveals, social proof, brand stories, invitations
+4. **Populate the JSON fallback bank** — convert written posts to `data/bank/*.json` format
+5. **Test image generation** — verify Cloudflare Workers AI produces images
+6. **Test reactions** — verify the staggered reaction system works
+7. **Test engagement engine** — verify discussion group gets seeded
+8. **Monitor for 1 week** — check health reports, tune prompts if needed
 
 ---
 
@@ -65,12 +84,8 @@
 
 | # | Date | Focus | Key Outcomes | Agent |
 |---|------|-------|-------------|-------|
-| 1 | 2026-07-06 | Strategy + Design | Full plan created, repo initialized, all docs | Kiro |
-| 2 | TBD | Phase A Execution | Channel foundation (bio, pinned msg, rules) | TBD |
-| 3 | TBD | Phase B (Part 1) | Accent Lessons + Myth Destroyers written | TBD |
-| 4 | TBD | Phase B (Part 2) | System Reveals + Social Proof + Brand Stories | TBD |
-| 5 | TBD | Phase C | Calendar + automation + scheduling | TBD |
-| 6 | TBD | Phase D | Launch — first posts live | TBD |
+| 1 | 2026-07-06 | Strategy + Design + Build + Deploy | Full plan, automation engine, Telethon bot built, deployed to server, channel LIVE | Kiro |
+| 2 | TBD | Systemd + Content + Verify | Start 24/7 service, write 21 posts, verify automation | TBD |
 
 ---
 
@@ -102,12 +117,20 @@
 | content/channel-description.md | Channel bio/about | ✅ Complete |
 | content/channel-username.md | Username options (ranked) | ✅ Complete |
 | content/discussion-group-rules.md | Discussion group rules | ✅ Complete |
-| content/accent-lessons/ | 9 accent lesson posts | ⬜ Not written |
+| content/accent-lessons/ | 9 accent lesson posts | ✅ Complete (AL-01 to AL-09) |
 | content/myth-destroyers/ | 6 myth destroyer posts | ⬜ Not written |
 | content/system-reveals/ | 6 system reveal posts | ⬜ Not written |
 | content/social-proof/ | 5 social proof posts | ⬜ Not written |
 | content/brand-stories/ | 4 brand story posts | ⬜ Not written |
 | content/invitations/ | 3 invitation/CTA posts | ⬜ Not written |
+| bot/setup_channel.py | One-time channel creation script | ✅ Complete (executed on server) |
+| bot/main.py | 24/7 autopilot engine | ✅ Complete (not yet running as service) |
+| bot/content_engine.py | Groq AI content generation | ✅ Complete |
+| bot/image_engine.py | Cloudflare Workers AI images | ✅ Complete |
+| bot/engagement_engine.py | Discussion group auto-seeding | ✅ Complete |
+| bot/config.py | Environment loader | ✅ Complete |
+| bot/DEPLOY.md | Deployment guide | ✅ Complete |
+| bot/.env.example | Credentials template | ✅ Complete |
 | calendar/MASTER-CALENDAR.md | Posting schedule | ⬜ Not written |
 
 ---
