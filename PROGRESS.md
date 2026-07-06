@@ -9,15 +9,18 @@
 
 | Phase | Status | Notes |
 |-------|:------:|-------|
-| Phase A — Foundation | ✅ COMPLETE | Channel description, pinned message, group rules, username |
+| Phase A — Foundation | ✅ COMPLETE | Channel description set, pinned message deployed, group rules posted |
 | Phase B — Content Bank | ✅ COMPLETE | 100 premium posts (20 AL + 20 MD + 20 SR + 20 SP + 10 BS + 10 IN) — 20 weeks |
-| Phase C — Bot Development | ✅ COMPLETE | Telethon userbot + HTML templates + bank-only content engine |
-| Phase D — Server Deployment | ✅ COMPLETE | Deployed, venv, deps, .env, Telegram authenticated |
-| Phase E — Channel Connected | ✅ COMPLETE | Bot pointing at @Empire_English_Community |
-| Phase F — Full Automation | ✅ COMPLETE | systemd service running 24/7, daily posting at 9AM Dubai |
-| Phase G — Quality Iteration | ✅ COMPLETE | Option A, premium formatting, RTL fixed, HTML2IMG images |
-| Phase H — Reactions + Engagement | ✅ COMPLETE | 4-8 reactions/post, discussion group seeding, event triggers |
-| Phase I — Monitor | 🟡 ONGOING | First automated post tomorrow 9AM Dubai |
+| Phase C — Automation Engine | ✅ COMPLETE | Telethon userbot, systemd service, daily posting 9AM Dubai |
+| Phase D — AI Generation (changed) | ✅ COMPLETE | Bank-only mode + HTML2IMG branded images |
+| Phase E — Reactions | ✅ COMPLETE | Userbot reactions, staggered 15min-8hrs, 4-8 per post |
+| Phase F — Engagement Engine | ✅ COMPLETE | Discussion group seeding (prompts + delayed tips) |
+| Phase G — Event Triggers | ✅ COMPLETE | Assessment completion → auto social proof post (30min polling) |
+| Phase H — Launch | ✅ COMPLETE | Pinned message deployed, description set, rules posted, burn-in passed |
+| Phase I — Monitor | 🟡 ONGOING | First automated post: tomorrow 9AM Dubai |
+
+**DEFERRED (not blocking):**
+- Cross-promotion (bot, assessment, Discord) — services not ready yet, marked "coming soon" in pinned message
 
 ---
 
@@ -70,12 +73,11 @@
 
 ## Next Session Priority
 
-1. **Monitor for 1 week** — verify daily posts go out at 9AM Dubai correctly
-2. **Review reactions** — check they appear naturally on posts
-3. **Review engagement** — check discussion group gets seeded
-4. **Review event triggers** — next time someone takes the assessment, verify auto-post fires
-5. **Fix any Arabic errors** — user reviews posts and flags corrections
-6. **Consider:** Pinned message deployment, voice notes (Kokoro TTS), more visual templates
+1. **Monitor** — check posts are going out daily at 9AM Dubai
+2. **Review reactions** — verify they appear naturally
+3. **Fix Arabic errors** — review posts on the channel and flag any corrections
+4. **Cross-promote** — when bot/assessment/Discord are ready, update pinned message with live links
+5. **Consider:** voice notes (Kokoro TTS), more visual templates, subscriber growth tactics
 
 ---
 
@@ -85,7 +87,8 @@
 |---|------|-------|-------------|-------|
 | 1 | 2026-07-06 | Strategy + Design + Build + Deploy + Content | Full plan, automation engine, Telethon bot, 50 premium posts, deployed to server, channel LIVE on autopilot | Kiro |
 | 2 | 2026-07-06 | Reactions + Engagement + Content + Events | Doubled to 100 posts (20 weeks), reactions engine, engagement engine, event triggers — all deployed | Kiro |
-| 3 | TBD | Monitor + Adjust | Verify everything works in production, fix any issues | TBD |
+| 3 | 2026-07-06 | Phase H Launch + Burn-in | Pinned message deployed, description set, group rules posted, burn-in test passed (post #82), cross-promo deferred (coming soon) | Kiro |
+| 4 | TBD | Monitor + Cross-Promote | Verify daily posts, add live links when services ready | TBD |
 
 ---
 
