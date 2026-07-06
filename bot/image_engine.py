@@ -62,11 +62,32 @@ async def generate_image(pillar: str, post_text: str = "") -> str | None:
                 timeout=aiohttp.ClientTimeout(total=60),
             ) as resp:
                 if resp.status == 200:
-                    # Response is raw image bytes
-                    image_data = await resp.read()
+                    content_type = resp.headers.get("Content-Type", "")
                     output_path = f"data/temp_image_{random.randint(1000,9999)}.png"
-                    with open(output_path, "wb") as f:
-                        f.write(image_data)
+
+                    if "image/" in content_type:
+                        # Direct image bytes
+                        image_data = await resp.read()
+                        with open(output_path, "wb") as f:
+                            f.write(image_data)
+                    else:
+                        # JSON response with base64 image
+                        import base64
+                        data = await resp.json()
+                        if "result" in data and "image" in data["result"]:
+                            image_b64 = data["result"]["image"]
+                            image_data = base64.b64decode(image_b64)
+                            with open(output_path, "wb") as f:
+                                f.write(image_data)
+                        elif isinstance(data, dict) and "image" in data:
+                            image_b64 = data["image"]
+                            image_data = base64.b64decode(image_b64)
+                            with open(output_path, "wb") as f:
+                                f.write(image_data)
+                        else:
+                            print(f"  ⚠️ Unexpected response format: {str(data)[:200]}")
+                            return None
+
                     print(f"  🖼️ Image generated: {output_path}")
                     return output_path
                 else:
