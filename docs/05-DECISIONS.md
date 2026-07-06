@@ -58,3 +58,25 @@ These will be decided during Phase A execution:
 ---
 
 *This file is append-only. New decisions are added at the bottom. Existing decisions are never removed — only marked as "superseded" with a date and reason if overridden by the owner.*
+
+
+
+---
+
+## Automation Decisions (Locked July 6, 2026)
+
+| # | Decision | Choice | Rationale |
+|---|----------|--------|-----------|
+| 19 | Human involvement | Zero (fully autonomous) | Owner's explicit requirement — focus on other projects |
+| 20 | Content generation | 100% AI-generated (bank as fallback) | Long-term sustainability without human writing |
+| 21 | Approval flow | None — auto-approve with quality filter | Zero involvement requirement |
+| 22 | Quality guarantee | Multi-layer validation + template-constrained prompts + few-shot examples | Prevents off-brand output without human review |
+| 23 | Voice content | Kokoro TTS (not human voice) | Can't automate human recordings; Kokoro is professional |
+| 24 | Engagement | Bot reactions (natural pattern) + discussion group seeding | Channel looks active throughout the day |
+| 25 | Reaction pattern | 8-12 bots, staggered delays, random emoji, random selection per post | Mimics natural human behavior |
+| 26 | AI provider | Groq ONLY (no Gemini ever) | Gemini has limits, rate issues, unreliable free tier |
+| 27 | Image generation | Cloudflare Workers AI (FLUX.1 Schnell) | Free (10K neurons/day), already have account, great quality |
+| 28 | Failure mode | Evergreen bank fallback → channel NEVER goes silent | Reliability over perfection |
+| 29 | Monitoring | Passive alerts only (alert if broken, otherwise silent) | Zero-involvement design |
+| 30 | Event triggers | Assessment completion → auto social proof post | Makes channel feel alive with real activity |
+| 31 | Scaling reactions | Proportional to subscriber count (never disproportionate) | Avoids detection; looks natural at any scale |

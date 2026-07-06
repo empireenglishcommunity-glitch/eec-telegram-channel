@@ -20,23 +20,32 @@
 ## What's Been Done
 
 ### Session 1 — July 6, 2026
-**Focus:** Strategic analysis + system design + repo creation
+**Focus:** Strategic analysis + system design + repo creation + full automation architecture
 
 **Completed:**
 - [x] Full strategic analysis (Telegram vs alternatives, ecosystem positioning)
 - [x] Content architecture designed (6 pillars, formats, weekly calendar)
 - [x] Brand voice system defined (MACAL tone, templates, rules)
-- [x] Implementation plan created (Phases A→E)
+- [x] Implementation plan created (Phases A→H)
 - [x] 30-post evergreen bank outlined (topics + hooks for all 30)
 - [x] Success metrics defined
 - [x] Risk mitigations documented
-- [x] Design decisions locked
+- [x] Design decisions locked (18 + 9 automation decisions = 27 total)
 - [x] Repository created with full structure
 - [x] All documentation files written
+- [x] **FULL AUTOMATION ENGINE DESIGNED** (`docs/06-AUTOMATION-ENGINE.md`)
+  - Content generation: Groq AI (no Gemini) — auto-generates weekly
+  - Image generation: Cloudflare Workers AI (FLUX.1 Schnell) — free, per-post visuals
+  - Reaction engine: 8-12 bot accounts with staggered natural-looking reactions
+  - Engagement engine: Discussion group auto-seeding throughout the day
+  - Voice content: Kokoro TTS (already on server) — pronunciation demos
+  - Event triggers: Assessment completion → auto social proof posts
+  - Health monitoring: Passive alerts, auto-recovery, never goes silent
+  - Total cost: $0/month additional
 
 **Not Completed (Next Session):**
 - [ ] Phase A execution: channel description, pinned message, branding copy
-- [ ] Phase B start: write actual post content (accent lessons first)
+- [ ] Phase B: write 30 evergreen posts (these become AI few-shot examples + bank fallback)
 
 ---
 
@@ -47,7 +56,8 @@
 2. Write the pinned message (the channel "homepage" — funnel to bot/assessment)
 3. Set channel username (decide: @empireengclub or @empireenglishclub or other)
 4. Write discussion group rules
-5. Then move to Phase B: write first 9 Accent Lesson posts
+5. Then Phase B: write 30 posts (these become both the bank AND few-shot examples for AI)
+6. Then Phase C+D: build the n8n automation workflows
 
 ---
 
@@ -87,6 +97,7 @@
 | docs/03-BRAND-VOICE.md | Writing system, tone, templates | ✅ Complete |
 | docs/04-IMPLEMENTATION-PLAN.md | Phase breakdown with tasks | ✅ Complete |
 | docs/05-DECISIONS.md | Locked design decisions | ✅ Complete |
+| docs/06-AUTOMATION-ENGINE.md | Full autopilot technical architecture | ✅ Complete |
 | content/pinned-message.md | Channel pinned post | ⬜ Not written |
 | content/channel-description.md | Channel bio/about | ⬜ Not written |
 | content/accent-lessons/ | 9 accent lesson posts | ⬜ Not written |
