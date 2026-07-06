@@ -1,0 +1,22 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# Environment files (if we ever add automation scripts)
+.env
+.env.local
+
+# Temp files
+*.tmp
+*.bak
+
+# Audio working files (final versions go in assets/)
+*.wav
+*.raw
