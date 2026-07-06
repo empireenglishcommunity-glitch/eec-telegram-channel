@@ -20,6 +20,7 @@ import config
 from content_engine import generate_post, get_bank_post
 from image_engine import generate_image
 from engagement_engine import seed_discussion_group
+from event_triggers import check_new_assessments
 
 # Global client
 client: TelegramClient = None
@@ -100,48 +101,37 @@ async def daily_post():
 
 async def schedule_reactions(channel, message_id):
     """Schedule staggered reactions throughout the day."""
-    # Decide how many reactions (based on randomness + realism)
     num_reactions = random.randint(4, 8)
 
     for i in range(num_reactions):
-        # Random delay: 15 min to 8 hours, exponentially distributed
-        # (more reactions early, fewer late)
         if i < 3:
-            # First 3 reactions: 15 min to 2 hours
-            delay = random.randint(900, 7200)
+            delay = random.randint(900, 7200)  # 15 min to 2 hours
         else:
-            # Later reactions: 2 to 8 hours
-            delay = random.randint(7200, 28800)
+            delay = random.randint(7200, 28800)  # 2 to 8 hours
 
-        # Add some jitter
-        delay += random.randint(-120, 120)
-        delay = max(300, delay)  # Minimum 5 minutes
+        delay += random.randint(-120, 120)  # Jitter
+        delay = max(300, delay)  # Min 5 minutes
 
         emoji = random.choice(config.REACTION_EMOJIS)
 
-        # Schedule the reaction
-        run_time = datetime.now() + timedelta(seconds=delay)
-        scheduler.add_job(
-            do_react,
-            "date",
-            run_date=run_time,
-            args=[channel, message_id, emoji],
-            id=f"react_{message_id}_{i}",
-            replace_existing=True,
-        )
+        # Use asyncio.create_task with sleep instead of APScheduler
+        # (APScheduler has issues with async + global client)
+        asyncio.create_task(_delayed_reaction(channel, message_id, emoji, delay, i))
 
 
-async def do_react(channel, message_id, emoji):
-    """Add a reaction to a message."""
+async def _delayed_reaction(channel, message_id, emoji, delay, index):
+    """Wait and then react to a message."""
+    await asyncio.sleep(delay)
     try:
         await client(SendReactionRequest(
             peer=channel,
             msg_id=message_id,
             reaction=[ReactionEmoji(emoticon=emoji)]
         ))
-        print(f"  👍 Reacted with {emoji} to msg {message_id}")
+        mins = delay // 60
+        print(f"  👍 Reacted {emoji} to msg {message_id} (after {mins}min)")
     except Exception as e:
-        print(f"  ⚠️ Reaction failed: {e}")
+        print(f"  ⚠️ Reaction failed (msg {message_id}): {e}")
 
 
 async def weekly_generate():
@@ -155,16 +145,22 @@ async def weekly_generate():
 async def health_check():
     """Daily health check (runs 11 PM Dubai)."""
     print(f"[{datetime.now()}] Health check")
-    # TODO: Check queue depth, subscriber count, alert if issues
     try:
         channel = await get_channel()
-        # Get channel info for stats
         full = await client.get_entity(channel)
         print(f"  Channel: {full.title}")
         print(f"  Health: OK")
     except Exception as e:
         print(f"  ❌ Health check failed: {e}")
         await client.send_message("me", f"⚠️ EEC Bot health check failed: {e}")
+
+
+async def event_check():
+    """Check for new events (assessments, milestones) every 30 min."""
+    try:
+        await check_new_assessments(client)
+    except Exception as e:
+        print(f"  ⚠️ Event check error: {e}")
 
 
 async def start():
@@ -208,11 +204,21 @@ async def start():
         replace_existing=True,
     )
 
+    # Event triggers: check every 30 minutes for new assessments
+    scheduler.add_job(
+        event_check,
+        "interval",
+        minutes=30,
+        id="event_check",
+        replace_existing=True,
+    )
+
     scheduler.start()
     print(f"\n📅 Scheduled:")
     print(f"   • Daily post: 9:00 AM Dubai (Sat-Thu)")
     print(f"   • Weekly generation: Sunday 2:00 AM Dubai")
     print(f"   • Health check: 11:00 PM Dubai")
+    print(f"   • Event triggers: every 30 minutes")
     print(f"\n🏛️ Bot is running. Press Ctrl+C to stop.\n")
 
     # Keep running
