@@ -15,6 +15,7 @@ body {
   background: #0A0A0F;
   overflow: hidden;
   position: relative;
+  direction: rtl;
 }
 
 /* Noise texture overlay */
@@ -52,6 +53,7 @@ body::after {
   display: flex;
   align-items: center;
   gap: 16px;
+  direction: ltr;
 }
 
 .pillar-icon {
@@ -111,6 +113,8 @@ body::after {
   font-size: 38px;
   color: #D4AF37;
   letter-spacing: 1px;
+  direction: ltr;
+  text-align: left;
 }
 
 .examples {
@@ -127,8 +131,10 @@ body::after {
   color: #F5F0E8;
   padding: 12px 24px;
   background: rgba(212,175,55,0.08);
-  border-right: 3px solid #D4AF37;
+  border-left: 3px solid #D4AF37;
   border-radius: 8px;
+  direction: ltr;
+  text-align: left;
 }
 
 /* Footer */
@@ -138,6 +144,7 @@ body::after {
   align-items: center;
   padding-top: 20px;
   border-top: 1px solid rgba(212,175,55,0.15);
+  direction: ltr;
 }
 
 .brand {
@@ -160,7 +167,7 @@ body::after {
 def wrap_html(inner_content: str, extra_styles: str = "") -> str:
     """Wrap content in the base HTML template."""
     return f"""<!DOCTYPE html>
-<html>
+<html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <style>
