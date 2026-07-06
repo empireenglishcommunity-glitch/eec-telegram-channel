@@ -1,198 +1,355 @@
 """
 Content generation engine — uses Groq AI to generate channel posts.
 Falls back to evergreen bank if AI fails.
+
+CRITICAL: The AI must write in PURE Egyptian Arabic (masri dialect).
+The prompts use few-shot examples and banned word lists to enforce this.
 """
 import json
 import random
 import aiohttp
 import config
 
-# Few-shot examples for each pillar (the AI mimics these)
+# ═══════════════════════════════════════════════════════════════
+# BANNED WORDS — If AI uses ANY of these, the post is REJECTED
+# These are formal Arabic (fusha) or non-Egyptian words
+# ═══════════════════════════════════════════════════════════════
+BANNED_WORDS = [
+    "إن شاء الله سوف",  # fusha
+    "يتوجب",  # fusha
+    "لذلك",  # fusha (use "عشان كده")
+    "ولكن",  # fusha (use "بس")
+    "هذا",  # fusha (use "ده")
+    "هذه",  # fusha (use "دي")
+    "الذي",  # fusha (use "اللي")
+    "التي",  # fusha (use "اللي")
+    "لأنه",  # fusha (use "عشان")
+    "يمكنك",  # fusha (use "تقدر")
+    "عليك أن",  # fusha (use "لازم")
+    "ينبغي",  # fusha (use "المفروض")
+    "بالإضافة إلى",  # fusha
+    "من الضروري",  # fusha (use "لازم")
+    "يجب أن",  # fusha (use "لازم")
+    "سوف",  # fusha (use "هـ" prefix)
+    "أيضاً",  # fusha (use "كمان")
+    "تابعونا",  # ban: begging
+    "شير",  # ban: begging
+    "لا تنسوا",  # ban: begging
+    "اشتركوا",  # ban: begging
+    "حسناً",  # fusha (use "تمام" or "أوكي")
+    "بالطبع",  # fusha (use "طبعاً")
+    "إذا",  # fusha (use "لو")
+    "حين",  # fusha (use "لما")
+    "لكي",  # fusha (use "عشان")
+    "تستطيع",  # fusha (use "تقدر")
+    "أنت تحتاج",  # awkward (use "انت محتاج")
+    "يعتبر",  # fusha
+    "نستعرض",  # fusha
+    "في هذا المقال",  # AI slop
+    "سنتحدث عن",  # AI slop fusha
+    "في الختام",  # AI slop fusha
+    "خلاصة القول",  # AI slop fusha
+]
+
+# ═══════════════════════════════════════════════════════════════
+# MASTER SYSTEM PROMPT — Used for ALL pillars
+# ═══════════════════════════════════════════════════════════════
+MASTER_SYSTEM = """أنت Mahmoud Ashri — مؤسس Empire English Community.
+بتكتب بوستات لقناة التيليجرام بتاعتك.
+
+═══ لغتك ═══
+- عامية مصرية ١٠٠٪ — بالظبط زي ما المصريين بيكلموا بعض في الشارع
+- "ده" مش "هذا" / "دي" مش "هذه" / "اللي" مش "الذي" / "عشان" مش "لأن" / "بس" مش "ولكن"
+- "هـ" prefix للمستقبل (هعمل، هتلاقي) مش "سوف"
+- "تقدر" مش "يمكنك" / "لازم" مش "يجب" / "كمان" مش "أيضاً"
+- الكلمات التقنية الإنجليزية تفضل إنجليزي: stress, shadowing, linking, accent, vowel, consonant
+
+═══ أسلوبك ═══
+- واثق. مفيش "أظن" أو "ربما". انت عارف.
+- ساخر بخفة — scalpel مش sledgehammer. بتضرب على الغلط مش على الشخص.
+- أبوي — حامي. "مش هسيبك تضيع وقتك."
+- مختصر — كل كلمة ليها سبب. لو ممكن تتشال — شيلها.
+- NEVER beg: ممنوع "تابعونا" / "شير" / "لا تنسوا" / "اشتركوا"
+- NEVER formal: ممنوع فصحى أو نبرة مقالات
+
+═══ شكل البوست ═══
+- سطر ١: HOOK — يوقّف الـ scroll (سؤال صادم / حقيقة مفاجئة / مشكلة مباشرة)
+- سطر ٢: فاضي (spacing)
+- سطور ٣-٨: BODY — الفكرة الواحدة. bullet points أو فقرات قصيرة.
+- سطر قبل الأخير: TAKEAWAY — جملة واحدة ملخّصة
+- سطر أخير: —
+- بعد الداش: breadcrumb خفيف (مثال: "ده جزء من اللي بنعمله جوه Empire.")
+
+═══ ممنوعات ═══
+- ممنوع hashtags (#)
+- ممنوع يزيد عن ٢٥٠ كلمة
+- ممنوع paragraphs طويلة (max ٣ سطور لكل فقرة)
+- ممنوع كلام ملهوش فايدة أو حشو
+- ممنوع تبدأ بـ "مرحباً" أو "صباح الخير" أو "في هذا المقال"
+
+═══ OUTPUT ═══
+اكتب البوست بالظبط — جاهز للنسخ واللصق في تيليجرام. من غير أي تعليق أو شرح."""
+
+# ═══════════════════════════════════════════════════════════════
+# FEW-SHOT EXAMPLES — The AI mimics THESE exactly
+# ═══════════════════════════════════════════════════════════════
+EXAMPLE_MYTH_DESTROYER = """💣 "لازم أتعلم grammar الأول وبعدين أتكلم"
+
+ده أكبر كدبة في تعليم اللغات.
+
+الأطفال بيتكلموا بطلاقة قبل ما يعرفوا إيه هو "verb" أصلًا.
+Grammar بيجي من الممارسة — مش العكس.
+لو استنيت لحد ما تفهم كل القواعد هتستنى سنين ومش هتفتح بقك.
+
+الحقيقة: اتكلم من اليوم الأول. غلّط. اتصحح. ده الطريق.
+
+—
+جوه Empire بنتكلم من أول يوم — مفيش "هفهم الأول وأتكلم بعدين.\""""
+
+EXAMPLE_ACCENT_LESSON = """كلمة "water" — لو بتنطقها "ووتر" أنت بتتكلم بريطاني من غير ما تعرف.
+
+🎯 The Flap T
+
+الأمريكان مش بيقولوا /t/ واضح في نص الكلمة.
+بيقولوا حاجة بين الـ D والـ T — صوت خفيف سريع.
+
+water = "wader"
+better = "bedder"
+little = "liddle"
+city = "siddy"
+
+القاعدة: لو الـ T جاي بين vowel و vowel — خلّيه soft.
+
+جرّب دلوقتي. قول "better" ٥ مرات. سجّل نفسك.
+
+—
+ده واحد من ٤٤ صوت بنشتغل عليهم جوه Empire."""
+
+EXAMPLE_SYSTEM_REVEAL = """🏛️ إزاي بنعرف مستواك الحقيقي — من غير ما نسألك "إيه مستواك؟"
+
+الامتحان بتاعنا مش quiz عادي. ده نظام TOEFL-equivalent:
+
+• ٤ أقسام: Reading, Listening, Speaking, Writing
+• ٣٩٩ سؤال مختلف — مستحيل حد يقابل نفس الامتحان مرتين
+• نظام adaptive: الأسئلة بتتغير بناءً على إجاباتك
+• النتيجة: score من ١٢٠ + مستوى CEFR + مستوى Empire
+
+ده مش "اختبر مستواك" اللي في كل app. ده diagnostic حقيقي.
+
+—
+الامتحان مجاني. assessment.empireenglish.online"""
+
+EXAMPLE_SOCIAL_PROOF = """🔥 ٣٩٩ سؤال. ٦٢٤ combination. مستحيل حد يحفظ الامتحان.
+
+النظام بتاعنا فيه:
+• ١٧٢ سؤال vocabulary (كل سؤال في context مختلف)
+• ٩٨ سؤال grammar
+• ٢٧ passage قراءة + ١٣٥ سؤال comprehension
+• ٦ passages استماع بصوت AI حقيقي (مش robot)
+• نظام IRT adaptive — كل واحد بيجيله امتحان مختلف
+
+ده مش quiz على Facebook. ده placement test حقيقي.
+
+—
+مجاني. ٢٠ دقيقة. هتعرف مستواك بالظبط."""
+
+EXAMPLE_BRAND_STORY = """👑 مفيش course في الدنيا هيخليك تتكلم إنجليزي.
+
+مش عشان الـ courses وحشة — عشان الفكرة نفسها غلط.
+Course = حد يقولك معلومات. بس المعلومات لوحدها مش بتخلّي حد يتكلم.
+
+اللي بيخلّيك تتكلم: نظام يومي + community + accountability.
+ده اللي Empire مبني عليه.
+
+مش مدرس بيقرّي. ده operating system بيشغّلك.
+
+ℳ"""
+
+# ═══════════════════════════════════════════════════════════════
+# PILLAR-SPECIFIC PROMPTS (appended to MASTER_SYSTEM)
+# ═══════════════════════════════════════════════════════════════
 PILLAR_PROMPTS = {
     "accent_lesson": {
-        "system": """أنت كاتب محتوى لـ Empire English Club — مجتمع تعليم إنجليزي للعرب.
-بتكتب بالعامية المصرية. الكلمات التقنية بالإنجليزي (stress, shadowing, linking).
+        "extra": """═══ نوع البوست: درس Accent ═══
+- ابدأ بكلمة أو صوت المصريين بيغلطوا فيه
+- اشرح الغلطة + الصح
+- أمثلة (٣-٥ كلمات)
+- "جرّب" أو "سجّل نفسك"
+- breadcrumb
 
-قواعد:
-- العامية المصرية فقط — ممنوع الفصحى
-- أول سطر hook قوي يوقّف القارئ
-- ممنوع hashtags
-- ممنوع "تابعونا" أو "شير"
-- ممنوع يزيد عن ٢٥٠ كلمة
-- الأسلوب: واثق، ساخر بخفة، أبوي
-- آخر سطر: breadcrumb خفيف ناحية Empire (مش بيع)
-- ابدأ بالمشكلة/الغلطة اللي المصريين بيعملوها
-- بعدها اشرح الصوت الصح
-- بعدها أمثلة (كلمات)
-- بعدها "اسمع" أو "جرّب"
-- اختم بـ breadcrumb
-
-اكتب البوست بالظبط — من غير أي كلام إضافي.""",
+مثال كامل:
+---
+""" + EXAMPLE_ACCENT_LESSON + "\n---",
         "topics": [
-            "Glottal Stop T (mountain, kitten, button)",
-            "Nasal sounds /m/ /n/ /ŋ/ differences",
-            "Consonant clusters (strengths, asks, texts)",
-            "Weak forms of function words (to, for, of, and)",
-            "Sentence stress and emphasis patterns",
-            "The American O sound (/ɑ/ vs /oʊ/)",
-            "Silent letters (knife, psychology, Wednesday)",
-            "Diphthongs /aɪ/ /aʊ/ /ɔɪ/ in American English",
-            "Dropped syllables in fast speech (probably, basically, actually)",
-            "Word-final consonant release (stop, but, back)",
+            "The Glottal Stop T — كلمات زي mountain, kitten, button الأمريكان مش بيقولوا الـ t فيها",
+            "Nasal sounds — الفرق بين /m/ /n/ /ŋ/ وليه المصريين بيخلطوهم",
+            "Consonant clusters — ليه كلمة strengths صعبة ومفيش حل غير التمرين",
+            "Weak forms — كلمات to, for, of, and بتتنطق مختلف في الجمل",
+            "Sentence stress — الأمريكان بيأكّدوا على كلمات معينة والباقي بيتبلع",
+            "The American O — الفرق بين /ɑ/ (hot) و /oʊ/ (go) وليه المصريين بيقولوهم زي بعض",
+            "Silent letters — ليه knife ما فيهاش K وليه Wednesday ٣ syllables بس",
+            "Diphthongs — أصوات /aɪ/ (my) /aʊ/ (how) /ɔɪ/ (boy) الصح بتاعهم",
+            "Dropped syllables — probably = probly, actually = akshly, basically = basikly",
+            "Word-final consonant release — إزاي تقول stop, back, but من غير ما تزود vowel في الآخر",
         ],
     },
     "myth_destroyer": {
-        "system": """أنت كاتب محتوى لـ Empire English Club.
-بتكتب بالعامية المصرية. أسلوبك: واثق، ساخر، أبوي.
-
-قواعد:
-- ابدأ بالـ myth (اكتبه كأنه حقيقة — provocative)
+        "extra": """═══ نوع البوست: Myth Destroyer 💣 ═══
+- ابدأ بـ 💣 + الـ myth (كأنه حقيقة)
 - سطر فاضي
-- ٢-٣ سطور بتكسر الـ myth بمنطق أو مثال
-- سطر "الحقيقة هي..." 
-- breadcrumb خفيف لـ Empire (اختياري)
-- ممنوع hashtags أو "تابعونا"
-- Max ١٥٠ كلمة""",
+- ٢-٣ سطور تكسر الـ myth (منطق، مثال، أو حقيقة علمية)
+- "الحقيقة:" + جملة واحدة
+- breadcrumb (اختياري)
+
+مثال كامل:
+---
+""" + EXAMPLE_MYTH_DESTROYER + "\n---",
         "topics": [
-            "لازم تتعلم الإنجليزي من صغرك (critical period myth)",
-            "لو عايز تتعلم لازم تاخد course غالي",
-            "الأفلام والأغاني كفاية تتعلم منها",
-            "لازم تحفظ قواعد كتير قبل ما تتكلم",
-            "Accent مش مهم — المهم الناس تفهمك",
-            "لو مش عايش في بلد إنجليزي مش هتتعلم صح",
-            "الكبار مش بيتعلموا languages بسهولة",
-            "Online learning مش بيجيب نتيجة",
-            "التعليم الذاتي مستحيل من غير مدرس",
-            "لو بتغلط كتير يبقى مش هتتعلم",
+            "لازم تتعلم الإنجليزي وانت صغير عشان تبقى كويس (critical period myth)",
+            "لو عايز تتعلم صح لازم تاخد course بآلاف الجنيهات",
+            "الأفلام والأغاني كفاية تتعلم منها من غير ما تعمل حاجة تانية",
+            "لازم تحفظ كل القواعد الأول قبل ما تفتح بقك",
+            "الـ accent مش مهم — المهم الناس تفهمك وبس",
+            "لو مش عايش في أمريكا أو بريطانيا مستحيل تتعلم صح",
+            "فات الأوان — أنا كبرت ومخي مش هيستوعب لغة جديدة",
+            "Online learning مش بيجيب نتيجة — لازم face to face",
+            "مستحيل تتعلم لوحدك من غير مدرس يمسك إيدك",
+            "لو بتغلط كتير يبقى مفيش فايدة — انت مش هتتعلم",
         ],
     },
     "system_reveal": {
-        "system": """أنت كاتب محتوى لـ Empire English Club.
-بتكتب بالعامية المصرية. بتشرح جزء من النظام التعليمي.
+        "extra": """═══ نوع البوست: System Reveal 🏛️ ═══
+- ابدأ بـ 🏛️ + سؤال أو statement يخلّي القارئ curious
+- اشرح جانب واحد من النظام
+- bullet points (•) للتفاصيل
+- أرقام محددة (مش كلام عام)
+- اختم بـ breadcrumb + link (لو مناسب)
 
-قواعد:
-- ابدأ بسؤال أو statement بيخلّي القارئ curious
-- اشرح جانب واحد من النظام (bullet points)
-- كن specific (أرقام، أدوات، methods)
-- اختم بـ "عايز تجربه؟" + breadcrumb
-- ممنوع hashtags
-- Max ٢٥٠ كلمة""",
+مثال كامل:
+---
+""" + EXAMPLE_SYSTEM_REVEAL + "\n---",
         "topics": [
-            "The 7-task daily loop (what and why this order)",
-            "How we use AI to evaluate your pronunciation",
-            "The streak system and accountability",
-            "How voice lounges work (daily sessions, level-gated)",
-            "The advancement exam (when and how you level up)",
-            "How we track your progress (dashboard, weekly scores)",
-            "The buddy system (how new members are paired)",
-            "Content factory (how 25 AI prompts generate infinite content)",
-            "Why we chose Discord over WhatsApp or Telegram for delivery",
-            "The 44 phonemes system (what it is, why it works)",
+            "الـ 7 tasks اللي كل member بيعملهم كل يوم (وليه بالترتيب ده)",
+            "إزاي AI بيقيّم نطقك ويقولك فين الغلط بالظبط",
+            "نظام الـ streaks والـ accountability — ليه محدش بيقدر يهرب",
+            "الـ voice lounges — sessions يومية، level-gated، إنجليزي بس",
+            "امتحان الترقية — إمتى تتقدم من Level لـ Level وإيه المطلوب",
+            "الـ dashboard — بتتابع progress بتاعك أسبوع بأسبوع بالأرقام",
+            "الـ buddy system — كل member جديد بيتوصّل بحد يساعده",
+            "ليه اخترنا Discord مش WhatsApp أو Telegram للتعليم",
+            "الـ 44 phonemes — كل صوت في الإنجليزي ومحدش بيعلمك دول",
+            "إزاي النظام بيشتغل ٢٤ ساعة من غير ما حد يعمل حاجة (automation)",
         ],
     },
     "social_proof": {
-        "system": """أنت كاتب محتوى لـ Empire English Club.
-بتكتب بالعامية المصرية. بتكتب بوست social proof.
-
-قواعد:
-- ابدأ بنتيجة (رقم أو إنجاز محدد)
-- مين الشخص + من فين بدأ + قد إيه وقت
-- إيه اللي عمله (specific)
+        "extra": """═══ نوع البوست: Social Proof 🔥 ═══
+- ابدأ بـ 🔥 + رقم أو إنجاز ملفت
+- تفاصيل (مين، فين، إزاي)
+- أرقام محددة
 - breadcrumb: "ده اللي النظام بينتجه"
-- ممنوع hashtags
-- Max ١٥٠ كلمة
-- لو مفيش data حقيقي — اكتب بوست عن stats النظام نفسه (عدد الأسئلة، عدد التمارين، إلخ)""",
+
+مثال كامل:
+---
+""" + EXAMPLE_SOCIAL_PROOF + "\n---",
         "topics": [
-            "Assessment system stats (399 questions, 624 reading combinations, IRT adaptive)",
-            "Community activity (voice lounge hours, tasks completed this week)",
-            "First student to hit Level 1 from Level 0",
-            "The 56-day L0 curriculum (448 vocab, 56 speaking missions, 56 writing prompts)",
-            "Kokoro TTS (professional AI voice for pronunciation demos — free, self-hosted)",
-            "Number of unique test paths (impossible to memorize)",
-            "Discord server structure (42 channels, 9 roles, 3 bots working 24/7)",
+            "نظام الامتحان: ٣٩٩ سؤال، ٦٢٤ combination قراءة، IRT adaptive — مستحيل تحفظه",
+            "الـ curriculum: ٤٤٨ كلمة + ٥٦ speaking mission + ٥٦ writing prompt في ٨ أسابيع",
+            "صوت AI حقيقي (Kokoro TTS) — مش Google Translate voice — self-hosted ومجاني",
+            "البنية: ٤٢ channel + ٩ roles + ٣ bots شغالين ٢٤/٧ على Discord",
+            "الامتحان adaptive — كل طالب بيجيله مسار مختلف — مستحيل حد يغش",
+            "التكلفة الكلية: ٨ دولار في الشهر بس — كل حاجة self-hosted",
+            "المنهج L0: من صفر لـ Level 1 في ٨-١٢ أسبوع — محطوط يوم بيوم",
         ],
     },
     "brand_story": {
-        "system": """أنت كاتب محتوى لـ Empire English Club.
-بتكتب بالعامية المصرية. بتكتب brand story.
-
-قواعد:
-- ابدأ بجملة شخصية أو visionary
-- احكي قصة (ليه بنينا EEC، أو فلسفة، أو moment مهم)
+        "extra": """═══ نوع البوست: Brand Story 👑 ═══
+- ابدأ بـ 👑 + جملة شخصية أو visionary
+- احكي قصة أو فلسفة (٢-٣ فقرات قصيرة)
 - اختم بجملة punchy تتحفظ
 - ختام: ℳ
-- ممنوع hashtags
-- Max ٢٥٠ كلمة""",
+- ممنوع يبقى preachy أو motivational speaker vibes
+
+مثال كامل:
+---
+""" + EXAMPLE_BRAND_STORY + "\n---",
         "topics": [
-            "Why 'system over instructor' is the future",
-            "The moment I realized courses don't work",
-            "Common Sense First — what it means and why",
-            "Building in public — $8/month runs everything",
-            "Why we chose American accent specifically",
-            "The 10,000 member vision — where this is going",
-            "Why free pilot first (prove the system, then charge)",
-            "Empire = not for everyone (exclusive by design)",
+            "النظام > المدرس — ليه ده المستقبل وليه الـ courses ماتت",
+            "اللحظة اللي فهمت فيها إن الـ courses مش شغالة",
+            "Common Sense First — يعني إيه وليه ده شعارنا",
+            "بنبني قدام الناس — ٨ دولار في الشهر بتشغّل كل حاجة",
+            "ليه American accent بالذات — مش British مش Australian",
+            "الـ vision: ١٠,٠٠٠ عضو — وإحنا لسه في البداية",
+            "ليه بدأنا مجاني — نثبت النظام الأول وبعدين نشتغل",
+            "Empire مش لكل الناس — وده بالظبط اللي بيخلّيه يشتغل",
         ],
     },
 }
 
 
 async def generate_post(pillar: str) -> str | None:
-    """Generate a post using Groq AI."""
+    """Generate a post using Groq AI with strict Egyptian Arabic constraints."""
     pillar_config = PILLAR_PROMPTS.get(pillar)
     if not pillar_config:
         return None
 
     topic = random.choice(pillar_config["topics"])
+    system_prompt = MASTER_SYSTEM + "\n\n" + pillar_config["extra"]
 
     payload = {
         "model": "llama-3.3-70b-versatile",
         "messages": [
-            {"role": "system", "content": pillar_config["system"]},
-            {"role": "user", "content": f"اكتب بوست عن: {topic}\n\nاكتب البوست فقط — من غير أي كلام تاني."},
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"اكتب بوست عن: {topic}"},
         ],
-        "temperature": 0.8,
-        "max_tokens": 1000,
+        "temperature": 0.7,
+        "max_tokens": 800,
     }
 
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                "https://api.groq.com/openai/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {config.GROQ_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-                json=payload,
-                timeout=aiohttp.ClientTimeout(total=30),
-            ) as resp:
-                if resp.status != 200:
-                    print(f"  ⚠️ Groq returned {resp.status}")
-                    # Try fallback model
-                    return await _generate_fallback(pillar_config, topic)
+    # Try up to 3 times
+    for attempt in range(3):
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {config.GROQ_API_KEY}",
+                        "Content-Type": "application/json",
+                    },
+                    json=payload,
+                    timeout=aiohttp.ClientTimeout(total=30),
+                ) as resp:
+                    if resp.status != 200:
+                        print(f"  ⚠️ Groq returned {resp.status} (attempt {attempt+1})")
+                        continue
 
-                data = await resp.json()
-                text = data["choices"][0]["message"]["content"].strip()
+                    data = await resp.json()
+                    text = data["choices"][0]["message"]["content"].strip()
 
-                # Validate
-                if _validate_post(text):
-                    return text
-                else:
-                    print("  ⚠️ Post failed validation — regenerating")
-                    return await _generate_fallback(pillar_config, topic)
+                    # Validate
+                    if _validate_post(text):
+                        return text
+                    else:
+                        print(f"  ⚠️ Post failed validation (attempt {attempt+1}) — regenerating")
+                        # Increase temperature slightly for variety
+                        payload["temperature"] = min(0.9, payload["temperature"] + 0.1)
+                        continue
 
-    except Exception as e:
-        print(f"  ⚠️ Groq error: {e}")
-        return None
+        except Exception as e:
+            print(f"  ⚠️ Groq error (attempt {attempt+1}): {e}")
+            continue
+
+    # All 3 attempts failed — try fallback model
+    return await _generate_fallback(pillar_config, topic)
 
 
 async def _generate_fallback(pillar_config: dict, topic: str) -> str | None:
     """Fallback to 8b model."""
+    system_prompt = MASTER_SYSTEM + "\n\n" + pillar_config["extra"]
     payload = {
         "model": "llama-3.1-8b-instant",
         "messages": [
-            {"role": "system", "content": pillar_config["system"]},
-            {"role": "user", "content": f"اكتب بوست عن: {topic}\n\nاكتب البوست فقط."},
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"اكتب بوست عن: {topic}"},
         ],
         "temperature": 0.7,
         "max_tokens": 800,
@@ -211,7 +368,9 @@ async def _generate_fallback(pillar_config: dict, topic: str) -> str | None:
             ) as resp:
                 if resp.status == 200:
                     data = await resp.json()
-                    return data["choices"][0]["message"]["content"].strip()
+                    text = data["choices"][0]["message"]["content"].strip()
+                    if _validate_post(text):
+                        return text
     except:
         pass
     return None
@@ -219,18 +378,36 @@ async def _generate_fallback(pillar_config: dict, topic: str) -> str | None:
 
 def _validate_post(text: str) -> bool:
     """Validate a generated post meets quality standards."""
-    if not text or len(text) < 50:
+    if not text or len(text) < 80:
         return False
-    if len(text) > 2000:  # ~300 Arabic words
+    if len(text) > 1500:
         return False
     if "#" in text:
         return False
-    if "تابعونا" in text or "شير" in text:
-        return False
-    # Must contain some Arabic
+
+    # Check banned words
+    for word in BANNED_WORDS:
+        if word in text:
+            print(f"    ✗ Banned word found: '{word}'")
+            return False
+
+    # Must contain Arabic
     arabic_chars = sum(1 for c in text if "\u0600" <= c <= "\u06FF")
-    if arabic_chars < 20:
+    if arabic_chars < 30:
         return False
+
+    # Must have line breaks (structured, not a wall)
+    if text.count("\n") < 3:
+        return False
+
+    # Must start with a hook (not a greeting or generic opener)
+    first_line = text.split("\n")[0].strip()
+    bad_openers = ["مرحباً", "صباح الخير", "أهلاً", "في هذا", "سنتحدث", "اليوم سوف", "اليوم هنتكلم عن"]
+    for opener in bad_openers:
+        if first_line.startswith(opener):
+            print(f"    ✗ Bad opener: '{opener}'")
+            return False
+
     return True
 
 
@@ -249,8 +426,5 @@ async def get_bank_post(pillar: str) -> str | None:
 
 async def generate_weekly_batch():
     """Pre-generate 6 posts for the coming week."""
-    # This populates the queue for the week
-    # For now, posts are generated on-the-fly in daily_post
-    # This function can be expanded to pre-generate and queue
     print("  Weekly batch: generating on-the-fly (per-day generation active)")
     pass
