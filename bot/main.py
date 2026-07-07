@@ -25,6 +25,10 @@ from voice_engine import generate_voice_note
 from growth_engine import check_subscriber_milestone, log_analytics, check_post_views, monthly_state_of_empire
 from series_engine import get_series_post, get_series_state
 from bestof_engine import post_bestof
+from innovation_engine import (
+    post_voice_challenge, maybe_add_secret_code,
+    announce_audio_room, post_email_capture, post_referral
+)
 
 # Global client
 client: TelegramClient = None
@@ -119,6 +123,9 @@ async def daily_post():
             print("  ❌ No content available — skipping today")
             return
 
+        # 1.5. Maybe add secret code (10% chance)
+        post_text = maybe_add_secret_code(post_text)
+
         # 2. Generate image (using HTML templates)
         image_path = await generate_image(pillar, post_text, metadata)
 
@@ -153,6 +160,9 @@ async def daily_post():
 
         # 6. Seed discussion group
         await seed_discussion_group(client, post_text, pillar)
+
+        # 7. Innovation features (run after main post)
+        asyncio.create_task(_run_innovation_features(channel))
 
         print(f"  ✅ Reactions scheduled + group seeded")
 
@@ -274,6 +284,17 @@ async def event_check():
         await check_new_assessments(client)
     except Exception as e:
         print(f"  ⚠️ Event check error: {e}")
+
+
+async def _run_innovation_features(channel):
+    """Run Phase 4 innovation features after the daily post."""
+    try:
+        await post_voice_challenge(client, channel)
+        await post_email_capture(client, channel)
+        await post_referral(client, channel)
+        asyncio.create_task(announce_audio_room(client, channel))
+    except Exception as e:
+        print(f"  ⚠️ Innovation features error: {e}")
 
 
 async def _send_voice_after_delay(channel, post_text, metadata):
