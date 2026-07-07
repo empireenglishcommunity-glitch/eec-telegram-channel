@@ -38,13 +38,13 @@ DB_PATH = os.getenv("DB_PATH", "data/channel.db")
 REACTION_EMOJIS = ["🔥", "🔥", "🔥", "🔥", "❤️", "❤️", "👍", "👍", "😍", "🎯"]
 
 # Days of the week → pillar mapping (0=Monday, 5=Saturday, 6=Sunday)
-# Our schedule: Sat(5)=AL, Sun(6)=SP, Mon(0)=MD, Tue(1)=AL, Wed(2)=SR, Thu(3)=BS/IN
+# Our schedule: Sat(5)=AL, Sun(6)=SP, Mon(0)=MD, Tue(1)=empire_word, Wed(2)=SR, Thu(3)=alternates
 PILLAR_SCHEDULE = {
     5: "accent_lesson",      # Saturday
     6: "social_proof",       # Sunday
     0: "myth_destroyer",     # Monday
-    1: "accent_lesson",      # Tuesday (Empire Word)
+    1: "empire_word",        # Tuesday (single word focus — different from full accent lesson)
     2: "system_reveal",      # Wednesday
-    3: "brand_story",        # Thursday (alternates with invitation)
+    3: "alternating",        # Thursday (brand_story on even weeks, invitation on odd weeks)
     # Friday (4) = OFF
 }

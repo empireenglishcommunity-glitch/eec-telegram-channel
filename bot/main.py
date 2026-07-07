@@ -39,8 +39,16 @@ async def get_channel():
         return await client.get_entity(f"@{config.CHANNEL_USERNAME}")
 
 
+async def daily_post_with_jitter():
+    """Adds random 0-20 min delay before posting (makes timing look human)."""
+    jitter = random.randint(0, 1200)  # 0 to 20 minutes
+    print(f"[{datetime.now()}] Post jitter: waiting {jitter//60} min...")
+    await asyncio.sleep(jitter)
+    await daily_post()
+
+
 async def daily_post():
-    """Main daily posting routine — fires at 9 AM Dubai."""
+    """Main daily posting routine — fires at 9 AM Dubai (±10 min jitter)."""
     today = datetime.now().weekday()
 
     # Friday = OFF
@@ -48,7 +56,22 @@ async def daily_post():
         print(f"[{datetime.now()}] Friday — no post today")
         return
 
+    # Deduplication: check if we already posted today
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    dedup_file = "data/last_post_date.txt"
+    if os.path.exists(dedup_file):
+        with open(dedup_file, "r") as f:
+            last_date = f.read().strip()
+        if last_date == today_str:
+            print(f"[{datetime.now()}] Already posted today — skipping")
+            return
+
+    # Thursday alternation: even weeks = brand_story, odd weeks = invitation
     pillar = config.PILLAR_SCHEDULE.get(today, "accent_lesson")
+    if pillar == "alternating":
+        week_number = datetime.now().isocalendar()[1]
+        pillar = "brand_story" if week_number % 2 == 0 else "invitation"
+
     print(f"[{datetime.now()}] Daily post — pillar: {pillar}")
 
     try:
@@ -78,6 +101,10 @@ async def daily_post():
             msg = await client.send_message(channel, post_text)
 
         print(f"  ✅ Posted (msg_id: {msg.id})")
+
+        # Mark today as posted (deduplication)
+        with open("data/last_post_date.txt", "w") as f:
+            f.write(datetime.now().strftime("%Y-%m-%d"))
 
         # 4. Schedule reactions (staggered throughout the day)
         await schedule_reactions(channel, msg.id)
@@ -214,10 +241,10 @@ async def start():
     # Setup scheduler
     scheduler = AsyncIOScheduler(timezone="Asia/Dubai")
 
-    # Daily post at 9:00 AM Dubai
+    # Daily post at 9:00 AM Dubai (with jitter added inside daily_post)
     scheduler.add_job(
-        daily_post,
-        CronTrigger(hour=9, minute=0, timezone="Asia/Dubai"),
+        daily_post_with_jitter,
+        CronTrigger(hour=8, minute=50, timezone="Asia/Dubai"),
         id="daily_post",
         replace_existing=True,
     )
