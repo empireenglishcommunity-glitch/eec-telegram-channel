@@ -94,6 +94,12 @@ def _build_template(pillar: str, post_text: str, metadata: dict) -> str | None:
         subtitle = metadata.get("image_subtitle", "امتحان مجاني — ٢٠ دقيقة")
         return invitation(cta, subtitle)
 
+    elif pillar == "empire_word":
+        # Empire Word uses the accent_lesson template (same visual style)
+        topic = metadata.get("image_topic", _extract_english_topic(post_text))
+        examples = metadata.get("image_examples", _extract_examples(post_text))
+        return accent_lesson(topic, examples)
+
     return None
 
 

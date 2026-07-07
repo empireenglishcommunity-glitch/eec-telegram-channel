@@ -302,12 +302,7 @@ async def weekly_poll():
 
     try:
         channel = await get_channel()
-        await client.send_file(
-            channel,
-            file=None,  # No file
-            caption=None,
-        )
-        # Use Telethon's send_message with poll
+
         from telethon.tl.types import Poll, PollAnswer
         from telethon.tl.functions.messages import SendMediaRequest
         from telethon.tl.types import InputMediaPoll
@@ -469,8 +464,9 @@ async def start():
     print(f"   • Daily post: ~9:00 AM Dubai (±20 min jitter)")
     print(f"   • Evening tip: 7:00 PM Dubai")
     print(f"   • Weekly poll: Sunday 3:00 PM Dubai")
+    print(f"   • Weekly quiz: Sunday 5:00 PM Dubai")
     print(f"   • Weekly generation: Sunday 2:00 AM Dubai")
-    print(f"   • Health check: 11:00 PM Dubai")
+    print(f"   • Health check: 11:00 PM Dubai (+ milestones + analytics)")
     print(f"   • Event triggers: every 30 minutes")
     print(f"\n🏛️ Bot is running. Press Ctrl+C to stop.\n")
 
