@@ -100,38 +100,66 @@ async def daily_post():
 
 
 async def schedule_reactions(channel, message_id):
-    """Schedule staggered reactions throughout the day."""
-    num_reactions = random.randint(4, 8)
+    """Schedule staggered reactions using reaction bot tokens."""
+    # Load reaction bot tokens
+    token_file = "data/reaction_bot_tokens.txt"
+    if not os.path.exists(token_file):
+        print("  ⚠️ No reaction bot tokens found")
+        return
 
-    for i in range(num_reactions):
-        if i < 3:
-            delay = random.randint(900, 7200)  # 15 min to 2 hours
+    with open(token_file, "r") as f:
+        tokens = [line.strip() for line in f if line.strip()]
+
+    if not tokens:
+        print("  ⚠️ No reaction bot tokens")
+        return
+
+    # Get channel ID for Bot API (needs -100 prefix)
+    with open("data/channel_id.txt", "r") as f:
+        channel_id = int(f.read().strip().split("\n")[0])
+    chat_id = int(f"-100{channel_id}")
+
+    # Each bot reacts once, with staggered timing
+    for i, token in enumerate(tokens):
+        # Stagger: first bot 15-45 min, second 1-3 hours, etc.
+        if i == 0:
+            delay = random.randint(900, 2700)  # 15-45 min
+        elif i == 1:
+            delay = random.randint(3600, 10800)  # 1-3 hours
         else:
-            delay = random.randint(7200, 28800)  # 2 to 8 hours
+            delay = random.randint(7200, 21600)  # 2-6 hours
 
         delay += random.randint(-120, 120)  # Jitter
-        delay = max(300, delay)  # Min 5 minutes
+        delay = max(300, delay)
 
         emoji = random.choice(config.REACTION_EMOJIS)
 
-        # Use asyncio.create_task with sleep instead of APScheduler
-        # (APScheduler has issues with async + global client)
-        asyncio.create_task(_delayed_reaction(channel, message_id, emoji, delay, i))
+        asyncio.create_task(_bot_reaction(token, chat_id, message_id, emoji, delay, i))
+
+    print(f"  ⏱️ {len(tokens)} reactions scheduled (staggered)")
 
 
-async def _delayed_reaction(channel, message_id, emoji, delay, index):
-    """Wait and then react to a message."""
+async def _bot_reaction(token: str, chat_id: int, message_id: int, emoji: str, delay: int, index: int):
+    """Wait and then react using Bot API."""
     await asyncio.sleep(delay)
     try:
-        await client(SendReactionRequest(
-            peer=channel,
-            msg_id=message_id,
-            reaction=[ReactionEmoji(emoticon=emoji)]
-        ))
-        mins = delay // 60
-        print(f"  👍 Reacted {emoji} to msg {message_id} (after {mins}min)")
+        import aiohttp
+        url = f"https://api.telegram.org/bot{token}/setMessageReaction"
+        payload = {
+            "chat_id": chat_id,
+            "message_id": message_id,
+            "reaction": [{"type": "emoji", "emoji": emoji}],
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload) as resp:
+                if resp.status == 200:
+                    mins = delay // 60
+                    print(f"  👍 Bot {index+1} reacted {emoji} (after {mins}min)")
+                else:
+                    error = await resp.text()
+                    print(f"  ⚠️ Bot {index+1} reaction failed: {error[:100]}")
     except Exception as e:
-        print(f"  ⚠️ Reaction failed (msg {message_id}): {e}")
+        print(f"  ⚠️ Bot {index+1} reaction error: {e}")
 
 
 async def weekly_generate():
