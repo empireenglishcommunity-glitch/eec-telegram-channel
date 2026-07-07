@@ -120,14 +120,20 @@ async def schedule_reactions(channel, message_id):
     chat_id = int(f"-100{channel_id}")
 
     # Each bot reacts once, with staggered timing
-    for i, token in enumerate(tokens):
-        # Stagger: first bot 15-45 min, second 1-3 hours, etc.
-        if i == 0:
-            delay = random.randint(900, 2700)  # 15-45 min
-        elif i == 1:
-            delay = random.randint(3600, 10800)  # 1-3 hours
+    # For 100 members: 8-12 reactions looks natural
+    # Randomly skip some bots (not all react every time = more natural)
+    selected_tokens = tokens if len(tokens) <= 5 else random.sample(tokens, random.randint(min(6, len(tokens)), len(tokens)))
+
+    for i, token in enumerate(selected_tokens):
+        # Stagger: earlier bots react sooner, later ones spread out
+        if i < 2:
+            delay = random.randint(600, 2400)     # 10-40 min
+        elif i < 5:
+            delay = random.randint(2400, 7200)    # 40 min - 2 hours
+        elif i < 8:
+            delay = random.randint(7200, 14400)   # 2-4 hours
         else:
-            delay = random.randint(7200, 21600)  # 2-6 hours
+            delay = random.randint(14400, 25200)  # 4-7 hours
 
         delay += random.randint(-120, 120)  # Jitter
         delay = max(300, delay)
@@ -136,7 +142,7 @@ async def schedule_reactions(channel, message_id):
 
         asyncio.create_task(_bot_reaction(token, chat_id, message_id, emoji, delay, i))
 
-    print(f"  ⏱️ {len(tokens)} reactions scheduled (staggered)")
+    print(f"  ⏱️ {len(selected_tokens)} reactions scheduled (staggered over hours)")
 
 
 async def _bot_reaction(token: str, chat_id: int, message_id: int, emoji: str, delay: int, index: int):
