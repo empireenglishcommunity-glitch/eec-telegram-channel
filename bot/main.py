@@ -22,6 +22,7 @@ from image_engine import generate_image
 from engagement_engine import seed_discussion_group
 from event_triggers import check_new_assessments
 from voice_engine import generate_voice_note
+from growth_engine import check_subscriber_milestone, log_analytics, check_post_views, monthly_state_of_empire
 
 # Global client
 client: TelegramClient = None
@@ -106,6 +107,9 @@ async def daily_post():
         # Mark today as posted (deduplication)
         with open("data/last_post_date.txt", "w") as f:
             f.write(datetime.now().strftime("%Y-%m-%d"))
+
+        # Log analytics
+        await log_analytics(client, msg.id, pillar)
 
         # 4. Send voice note (accent lessons only)
         if pillar == "accent_lesson":
@@ -216,6 +220,12 @@ async def health_check():
         full = await client.get_entity(channel)
         print(f"  Channel: {full.title}")
         print(f"  Health: OK")
+
+        # Also check milestones and post views during health check
+        await check_subscriber_milestone(client)
+        await check_post_views(client)
+        await monthly_state_of_empire(client)
+
     except Exception as e:
         print(f"  ❌ Health check failed: {e}")
         await client.send_message("me", f"⚠️ EEC Bot health check failed: {e}")
@@ -326,6 +336,60 @@ async def weekly_poll():
         print(f"  ⚠️ Poll error: {e}")
 
 
+async def weekly_quiz():
+    """Post a pronunciation quiz on Sunday 5 PM (correct answer format)."""
+    import json as json_mod
+    bank_path = "data/bank/quizzes.json"
+    if not os.path.exists(bank_path):
+        return
+
+    with open(bank_path, "r", encoding="utf-8") as f:
+        quizzes = json_mod.load(f)
+
+    if not quizzes:
+        return
+
+    quizzes.sort(key=lambda q: q.get("used_count", 0))
+    selected = quizzes[0]
+
+    try:
+        channel = await get_channel()
+
+        from telethon.tl.types import Poll, PollAnswer
+        from telethon.tl.functions.messages import SendMediaRequest
+        from telethon.tl.types import InputMediaPoll
+
+        poll = Poll(
+            id=random.randint(1000000, 9999999),
+            question=selected["question"],
+            answers=[
+                PollAnswer(text=opt, option=bytes([i]))
+                for i, opt in enumerate(selected["options"])
+            ],
+            quiz=True,
+        )
+
+        input_media = InputMediaPoll(
+            poll=poll,
+            correct_answers=[bytes([selected["correct_option"]])],
+            solution=selected.get("explanation", ""),
+        )
+
+        await client(SendMediaRequest(
+            peer=channel,
+            media=input_media,
+            message="",
+            random_id=random.randint(1, 999999999),
+        ))
+
+        selected["used_count"] = selected.get("used_count", 0) + 1
+        with open(bank_path, "w", encoding="utf-8") as f:
+            json_mod.dump(quizzes, f, ensure_ascii=False, indent=2)
+        print(f"  🎯 Quiz sent: {selected['id']}")
+    except Exception as e:
+        print(f"  ⚠️ Quiz error: {e}")
+
+
 async def start():
     """Start the bot."""
     global client, scheduler
@@ -389,6 +453,14 @@ async def start():
         weekly_poll,
         CronTrigger(day_of_week="sun", hour=15, minute=0, timezone="Asia/Dubai"),
         id="weekly_poll",
+        replace_existing=True,
+    )
+
+    # Weekly quiz: Sunday 5:00 PM Dubai
+    scheduler.add_job(
+        weekly_quiz,
+        CronTrigger(day_of_week="sun", hour=17, minute=0, timezone="Asia/Dubai"),
+        id="weekly_quiz",
         replace_existing=True,
     )
 

@@ -1,0 +1,82 @@
+[
+  {
+    "id": "QZ-01",
+    "question": "🎯 كلمة 'water' — النطق الأمريكي الصح:",
+    "options": ["ووتر (بـ T واضح)", "وادر (بـ D خفيف)"],
+    "correct_option": 1,
+    "explanation": "الأمريكان بيقولوا الـ T بين حرفين متحركين زي D خفيف.",
+    "used_count": 0, "last_used": null
+  },
+  {
+    "id": "QZ-02",
+    "question": "🎯 كلمة 'comfortable' — كام مقطع في النطق الأمريكي؟",
+    "options": ["٤ مقاطع (com-for-ta-ble)", "٣ مقاطع (comf-ter-bl)"],
+    "correct_option": 1,
+    "explanation": "الأمريكان بيبلعوا المقطع التالت.",
+    "used_count": 0, "last_used": null
+  },
+  {
+    "id": "QZ-03",
+    "question": "🎯 'very' و 'ferry' — الفرق في:",
+    "options": ["الـ V فيها اهتزاز — الـ F ملهاش", "الـ F فيها اهتزاز — الـ V ملهاش"],
+    "correct_option": 0,
+    "explanation": "V = اهتزاز في الزور. F = هوا بس.",
+    "used_count": 0, "last_used": null
+  },
+  {
+    "id": "QZ-04",
+    "question": "🎯 'can' الإيجابية في الجملة — بتتنطق إزاي؟",
+    "options": ["واضحة وقوية: CAN", "مختصرة وضعيفة: kn"],
+    "correct_option": 1,
+    "explanation": "can الإيجابية بتتبلع. can't السلبية بتبان.",
+    "used_count": 0, "last_used": null
+  },
+  {
+    "id": "QZ-05",
+    "question": "🎯 'going to' — في الكلام السريع بتبقى:",
+    "options": ["going to (كاملة)", "gonna"],
+    "correct_option": 1,
+    "explanation": "الأمريكان بيختصروها لـ gonna في الكلام اليومي.",
+    "used_count": 0, "last_used": null
+  },
+  {
+    "id": "QZ-06",
+    "question": "🎯 الـ R الأمريكي — لسانك بيعمل إيه؟",
+    "options": ["بيلمس سقف الفم", "بيتلف لورا من غير ما يلمس حاجة"],
+    "correct_option": 1,
+    "explanation": "الـ R الأمريكي: لسانك يتلف لورا. مفيش لمس.",
+    "used_count": 0, "last_used": null
+  },
+  {
+    "id": "QZ-07",
+    "question": "🎯 'schedule' — النطق الأمريكي:",
+    "options": ["SHED-yool (بريطاني)", "SKEJ-ool (أمريكي)"],
+    "correct_option": 1,
+    "explanation": "الأمريكان بيقولوا SKEJ. البريطانيين بيقولوا SHED.",
+    "used_count": 0, "last_used": null
+  },
+  {
+    "id": "QZ-08",
+    "question": "🎯 'people' — الغلطة المصرية الشائعة:",
+    "options": ["beoble (بـ B بدل P)", "people (صح)"],
+    "correct_option": 0,
+    "explanation": "العربي مفيهوش صوت P. المصريين بيقولوا B بدلها.",
+    "used_count": 0, "last_used": null
+  },
+  {
+    "id": "QZ-09",
+    "question": "🎯 في الجملة: 'cup of tea' — كلمة 'of' بتتنطق:",
+    "options": ["أوف (واضحة)", "əv (مختصرة ضعيفة)"],
+    "correct_option": 1,
+    "explanation": "of / to / and / for — كلمات ضعيفة بتتختصر في الجمل.",
+    "used_count": 0, "last_used": null
+  },
+  {
+    "id": "QZ-10",
+    "question": "🎯 'pronunciation' — الغلطة الشائعة:",
+    "options": ["pro-NOUN-ciation (خلط مع pronoun)", "pruh-NUN-see-AY-shun (الصح)"],
+    "correct_option": 0,
+    "explanation": "NUN مش NOUN. دي أكتر كلمة الناس بتنطقها غلط.",
+    "used_count": 0, "last_used": null
+  }
+]
