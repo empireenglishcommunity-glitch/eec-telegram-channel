@@ -21,6 +21,7 @@ from content_engine import generate_post, get_bank_post
 from image_engine import generate_image
 from engagement_engine import seed_discussion_group
 from event_triggers import check_new_assessments
+from voice_engine import generate_voice_note
 
 # Global client
 client: TelegramClient = None
@@ -106,10 +107,14 @@ async def daily_post():
         with open("data/last_post_date.txt", "w") as f:
             f.write(datetime.now().strftime("%Y-%m-%d"))
 
-        # 4. Schedule reactions (staggered throughout the day)
+        # 4. Send voice note (accent lessons only)
+        if pillar == "accent_lesson":
+            asyncio.create_task(_send_voice_after_delay(channel, post_text, metadata))
+
+        # 5. Schedule reactions (staggered throughout the day)
         await schedule_reactions(channel, msg.id)
 
-        # 5. Seed discussion group
+        # 6. Seed discussion group
         await seed_discussion_group(client, post_text, pillar)
 
         print(f"  ✅ Reactions scheduled + group seeded")
@@ -224,6 +229,103 @@ async def event_check():
         print(f"  ⚠️ Event check error: {e}")
 
 
+async def _send_voice_after_delay(channel, post_text, metadata):
+    """Send voice note 2-3 minutes after accent lesson post."""
+    delay = random.randint(120, 180)
+    await asyncio.sleep(delay)
+    try:
+        voice_path = await generate_voice_note(post_text, metadata or {})
+        if voice_path and os.path.exists(voice_path):
+            await client.send_file(channel, voice_path, voice_note=True)
+            os.remove(voice_path)
+            print(f"  🎧 Voice note sent (after {delay}s)")
+        else:
+            print(f"  ℹ️ No voice note generated (Kokoro might be stopped)")
+    except Exception as e:
+        print(f"  ⚠️ Voice note error: {e}")
+
+
+async def evening_tip():
+    """Post a short evening tip at 7 PM Dubai."""
+    import json
+    bank_path = "data/bank/evening_tips.json"
+    if not os.path.exists(bank_path):
+        return
+
+    with open(bank_path, "r", encoding="utf-8") as f:
+        tips = json.load(f)
+
+    if not tips:
+        return
+
+    # Pick least-used tip
+    tips.sort(key=lambda t: t.get("used_count", 0))
+    selected = tips[0]
+
+    try:
+        channel = await get_channel()
+        await client.send_message(channel, selected["text"])
+        selected["used_count"] = selected.get("used_count", 0) + 1
+        with open(bank_path, "w", encoding="utf-8") as f:
+            json.dump(tips, f, ensure_ascii=False, indent=2)
+        print(f"  💡 Evening tip sent: {selected['id']}")
+    except Exception as e:
+        print(f"  ⚠️ Evening tip error: {e}")
+
+
+async def weekly_poll():
+    """Post a poll on Sunday afternoon."""
+    import json
+    bank_path = "data/bank/polls.json"
+    if not os.path.exists(bank_path):
+        return
+
+    with open(bank_path, "r", encoding="utf-8") as f:
+        polls = json.load(f)
+
+    if not polls:
+        return
+
+    # Pick least-used poll
+    polls.sort(key=lambda p: p.get("used_count", 0))
+    selected = polls[0]
+
+    try:
+        channel = await get_channel()
+        await client.send_file(
+            channel,
+            file=None,  # No file
+            caption=None,
+        )
+        # Use Telethon's send_message with poll
+        from telethon.tl.types import Poll, PollAnswer
+        from telethon.tl.functions.messages import SendMediaRequest
+        from telethon.tl.types import InputMediaPoll
+
+        poll = Poll(
+            id=random.randint(1000000, 9999999),
+            question=selected["question"],
+            answers=[
+                PollAnswer(text=opt, option=bytes([i]))
+                for i, opt in enumerate(selected["options"])
+            ],
+        )
+
+        await client(SendMediaRequest(
+            peer=channel,
+            media=InputMediaPoll(poll=poll),
+            message="",
+            random_id=random.randint(1, 999999999),
+        ))
+
+        selected["used_count"] = selected.get("used_count", 0) + 1
+        with open(bank_path, "w", encoding="utf-8") as f:
+            json.dump(polls, f, ensure_ascii=False, indent=2)
+        print(f"  🗳️ Poll sent: {selected['id']} — {selected['question'][:40]}")
+    except Exception as e:
+        print(f"  ⚠️ Poll error: {e}")
+
+
 async def start():
     """Start the bot."""
     global client, scheduler
@@ -274,9 +376,27 @@ async def start():
         replace_existing=True,
     )
 
+    # Evening tip: 7:00 PM Dubai (with jitter)
+    scheduler.add_job(
+        evening_tip,
+        CronTrigger(hour=19, minute=0, timezone="Asia/Dubai"),
+        id="evening_tip",
+        replace_existing=True,
+    )
+
+    # Weekly poll: Sunday 3:00 PM Dubai
+    scheduler.add_job(
+        weekly_poll,
+        CronTrigger(day_of_week="sun", hour=15, minute=0, timezone="Asia/Dubai"),
+        id="weekly_poll",
+        replace_existing=True,
+    )
+
     scheduler.start()
     print(f"\n📅 Scheduled:")
-    print(f"   • Daily post: 9:00 AM Dubai (Sat-Thu)")
+    print(f"   • Daily post: ~9:00 AM Dubai (±20 min jitter)")
+    print(f"   • Evening tip: 7:00 PM Dubai")
+    print(f"   • Weekly poll: Sunday 3:00 PM Dubai")
     print(f"   • Weekly generation: Sunday 2:00 AM Dubai")
     print(f"   • Health check: 11:00 PM Dubai")
     print(f"   • Event triggers: every 30 minutes")
