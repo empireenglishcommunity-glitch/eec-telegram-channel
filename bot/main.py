@@ -23,6 +23,8 @@ from engagement_engine import seed_discussion_group
 from event_triggers import check_new_assessments
 from voice_engine import generate_voice_note
 from growth_engine import check_subscriber_milestone, log_analytics, check_post_views, monthly_state_of_empire
+from series_engine import get_series_post, get_series_state
+from bestof_engine import post_bestof
 
 # Global client
 client: TelegramClient = None
@@ -77,6 +79,37 @@ async def daily_post():
     print(f"[{datetime.now()}] Daily post — pillar: {pillar}")
 
     try:
+        # Check if we're mid-series (series overrides normal pillar)
+        series_state = get_series_state()
+        if series_state.get("active"):
+            post_text, metadata = await get_series_post()
+            if post_text:
+                pillar = "series"
+                # Skip image for series posts (text-only, cleaner)
+                channel = await get_channel()
+                msg = await client.send_message(channel, post_text)
+                print(f"  ✅ Series post (msg_id: {msg.id})")
+                with open("data/last_post_date.txt", "w") as f:
+                    f.write(datetime.now().strftime("%Y-%m-%d"))
+                await log_analytics(client, msg.id, "series")
+                await schedule_reactions(channel, msg.id)
+                await seed_discussion_group(client, post_text, pillar)
+                return
+
+        # Check if today should START a new series (Wednesday, every 2 weeks)
+        series_text, series_meta = await get_series_post()
+        if series_text:
+            channel = await get_channel()
+            msg = await client.send_message(channel, series_text)
+            print(f"  ✅ Series started (msg_id: {msg.id})")
+            with open("data/last_post_date.txt", "w") as f:
+                f.write(datetime.now().strftime("%Y-%m-%d"))
+            await log_analytics(client, msg.id, "series")
+            await schedule_reactions(channel, msg.id)
+            await seed_discussion_group(client, series_text, "system_reveal")
+            return
+
+        # Normal post flow
         # 1. Generate content (from bank)
         post_text, metadata = await generate_post(pillar)
         if not post_text:
@@ -225,6 +258,10 @@ async def health_check():
         await check_subscriber_milestone(client)
         await check_post_views(client)
         await monthly_state_of_empire(client)
+
+        # Check best-of recycling (first Sunday of month, after 8 weeks)
+        channel = await get_channel()
+        await post_bestof(client, channel)
 
     except Exception as e:
         print(f"  ❌ Health check failed: {e}")
