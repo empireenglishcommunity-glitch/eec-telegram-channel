@@ -5,6 +5,25 @@
 
 ---
 
+## 🟢 RESUME COMMAND — paste this to continue exactly where we left off
+
+```
+Read PROGRESS.md in the eec-telegram-channel repo, specifically Thread 2
+(MACAL Empire image generation). Steps 0-4 of image-gen/RUN_GUIDE.md are done:
+94 seed images generated, curated down to 76 (approved via PR #2), real
+captions written, dataset prepped and zipped to
+image-gen/dataset/curated_dataset.zip. Walk me through Step 5 — uploading
+that curated dataset to a new Kaggle session and running
+image-gen/training/MACAL_Empire_Train_LoRA.ipynb to train the brand LoRA.
+```
+
+Just paste the block above into a new session (any agent) and it will pick up
+exactly at Step 5 of the image-gen pipeline. Full detail on everything done so
+far is in the "Thread 2" section immediately below, and in
+`image-gen/dataset/CURATION-REVIEW.md` / `image-gen/RUN_GUIDE.md`.
+
+---
+
 ## ⏸️ ACTIVE WORK IN PROGRESS — READ THIS FIRST
 
 **Two parallel threads are mid-flight.** Read both before continuing:
