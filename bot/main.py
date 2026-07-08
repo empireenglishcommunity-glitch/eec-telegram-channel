@@ -298,19 +298,36 @@ async def _run_innovation_features(channel):
 
 
 async def _send_voice_after_delay(channel, post_text, metadata):
-    """Send voice note 2-3 minutes after accent lesson post."""
+    """Send voice note 2-3 minutes after accent lesson post. Auto-starts/stops Kokoro."""
     delay = random.randint(120, 180)
     await asyncio.sleep(delay)
     try:
+        # Start Kokoro container
+        import subprocess
+        subprocess.run(["docker", "compose", "start"], cwd="/opt/kokoro-tts", capture_output=True)
+        print(f"  🎧 Kokoro started, waiting for it to be ready...")
+        await asyncio.sleep(30)  # Wait 30s for Kokoro to load model
+
         voice_path = await generate_voice_note(post_text, metadata or {})
         if voice_path and os.path.exists(voice_path):
             await client.send_file(channel, voice_path, voice_note=True)
             os.remove(voice_path)
-            print(f"  🎧 Voice note sent (after {delay}s)")
+            print(f"  🎧 Voice note sent")
         else:
-            print(f"  ℹ️ No voice note generated (Kokoro might be stopped)")
+            print(f"  ℹ️ No voice note generated")
+
+        # Stop Kokoro to free RAM (~878 MB)
+        subprocess.run(["docker", "compose", "stop"], cwd="/opt/kokoro-tts", capture_output=True)
+        print(f"  🎧 Kokoro stopped (RAM freed)")
+
     except Exception as e:
         print(f"  ⚠️ Voice note error: {e}")
+        # Make sure Kokoro is stopped even on error
+        try:
+            import subprocess
+            subprocess.run(["docker", "compose", "stop"], cwd="/opt/kokoro-tts", capture_output=True)
+        except:
+            pass
 
 
 async def evening_tip():
