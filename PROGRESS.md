@@ -7,8 +7,9 @@
 
 ## ⏸️ ACTIVE WORK IN PROGRESS — READ THIS FIRST
 
-**MACAL (discussion group AI reply bot) is mid-renovation.** See
-**`docs/MACAL-V3-PLAN.md`** for full details. Quick summary:
+**Two parallel threads are mid-flight.** Read both before continuing:
+
+### Thread 1: MACAL (discussion group AI reply bot) — see `docs/MACAL-V3-PLAN.md`
 
 - MACAL v1/v2/v3 all live in `bot/group_reply_engine.py`
 - Current live version: **v3, Phase 1 complete and deployed** (full phonics knowledge,
@@ -20,6 +21,22 @@
   deleted. AI-only is the correct architecture for MACAL.
 - **When resuming:** read `docs/MACAL-V3-PLAN.md` in full, verify the service is healthy,
   then start Phase 2 (image library).
+
+### Thread 2: MACAL Empire brand image generation — see `image-gen/RUN_GUIDE.md`
+
+- Full research report at `docs/MACAL-EMPIRE-IMAGE-GEN-INFRASTRUCTURE.md` (self-hosted
+  SDXL/FLUX + ComfyUI, hardware options, LoRA training strategy, cost estimates)
+- A complete **zero-budget implementation** (Kaggle-based) has been built and tested
+  in `image-gen/` — seed prompt generator, dataset prep script, Kaggle notebooks for
+  ComfyUI setup and Kohya SS LoRA training, ComfyUI generation workflow, batch runner,
+  watermark generator
+- **Every script was executed and tested locally during development** (unit-level:
+  workflow graph consistency, watermark compositing, dataset validation) but the
+  **user has NOT yet run this on an actual Kaggle session** — there is no trained
+  LoRA and no generated images yet
+- **When resuming:** read `image-gen/RUN_GUIDE.md` and walk through Steps 0-6 with
+  the user on a real Kaggle account. Do not rebuild what's already there — it's
+  tested and working code, just unexecuted end-to-end on live Kaggle infrastructure.
 
 ---
 
@@ -45,6 +62,8 @@
 | **MACAL v2 — AI-only renovation** | ✅ COMPLETE | Deleted broken bank, AI-first architecture, clean & tested |
 | **MACAL v3 Phase 1 — Full phonics + brand + sales** | ✅ COMPLETE & DEPLOYED | See `docs/MACAL-V3-PLAN.md` |
 | **MACAL v3 Phase 2 — Branded image library** | 🔲 PLANNED, NOT STARTED | Resume point — see `docs/MACAL-V3-PLAN.md` |
+| **MACAL Empire self-hosted image-gen infrastructure report** | ✅ COMPLETE | Full research + implementation plan, see `docs/MACAL-EMPIRE-IMAGE-GEN-INFRASTRUCTURE.md` |
+| **MACAL Empire zero-budget image-gen pipeline (built)** | ✅ SCRIPTS BUILT & TESTED, NOT YET RUN ON KAGGLE | Kaggle-based SDXL+ComfyUI+LoRA pipeline, see `image-gen/RUN_GUIDE.md` — user has not yet executed the actual Kaggle run |
 
 **Content/posting automation (Phases A-H + Enhancements 1-4) is 100% complete.**
 **MACAL discussion-group bot is mid-enhancement — Phase 2 pending.**
@@ -123,7 +142,8 @@
 | 7 | 2026-07-08 | MACAL v2 — full AI-only renovation | Rewrote `group_reply_engine.py` from scratch, AI-only (Groq), tested 19+ question-detection cases, deployed and confirmed working live. | Kiro |
 | 8 | 2026-07-08 | MACAL v3 planning + Phase 1 build | Brainstormed full phonics + brand + image plan with user, documented in `docs/MACAL-V3-PLAN.md`. Built & deployed Phase 1: expanded knowledge (14+ sounds, 20 hard words), Empire/EEC brand integration, VALIDATE→VALUE→GAP→CTA sales strategy, 5 CTA variations, 5 examples. Tested 21 question-detection cases, all pass. Committed `ceef45a`, deployed to Hetzner. | Kiro |
 | 9 | TBD | **RESUME: MACAL v3 Phase 2** — image library | Build branded HTML→PNG infographics (gold/black Empire style) for ~15 topics, wire up topic-detection + image attachment in `group_reply_engine.py`. See `docs/MACAL-V3-PLAN.md` for full spec. | TBD |
-| 10 | TBD | Create 5 more bots + update pinned links | Run create_more_bots.py after rate limit clears. Update pinned message when services ready. | TBD |
+| 10 | 2026-07-08 | MACAL Empire image-gen research + zero-budget pipeline build | User asked for a full self-hosted image-gen infra plan for the "MACAL Empire" brand (Dark Luxury/Imperial/Cinematic). Researched and wrote full technical report (`docs/MACAL-EMPIRE-IMAGE-GEN-INFRASTRUCTURE.md`): confirmed zero GPU exists in current infra, compared FLUX vs SDXL vs ComfyUI vs A1111, LoRA training strategy, recommended reusing existing n8n as orchestrator. User then said they can't spend anything — added a Zero-Budget Path section (Kaggle free GPU, 30hrs/week). Then built the ENTIRE pipeline as working, tested code in `image-gen/`: seed prompt generator (105 prompts), dataset prep script, Kaggle setup notebook (ComfyUI), Kohya SS LoRA training config + notebook, ComfyUI generation workflow + batch runner + watermark generator, and a master `RUN_GUIDE.md`. Every script was actually executed and tested (not just written) — see commit `ed09230`. **Not yet run on actual Kaggle by the user.** | Kiro |
+| 11 | TBD | Create 5 more bots + update pinned links | Run create_more_bots.py after rate limit clears. Update pinned message when services ready. | TBD |
 
 ---
 
@@ -182,7 +202,15 @@
 | docs/MACAL-V3-PLAN.md | MACAL v3 full plan + resume point (Phase 2 next) | ✅ Active — READ BEFORE MACAL WORK |
 | ~~bot/phonics_bank_engine.py~~ | ~~Keyword bank matching~~ | ❌ Deleted — caused false positives, do not recreate |
 | ~~bot/data/bank/phonics_bank.json~~ | ~~Static answer bank~~ | ❌ Deleted — do not recreate |
+| docs/MACAL-EMPIRE-IMAGE-GEN-INFRASTRUCTURE.md | Full self-hosted image-gen research report | ✅ Complete |
+| image-gen/RUN_GUIDE.md | Master step-by-step guide for the zero-budget pipeline | ✅ Active — READ BEFORE IMAGE-GEN WORK |
+| image-gen/dataset/ | Seed prompts, dataset spec, prep script | ✅ Built & tested, not yet run on Kaggle |
+| image-gen/kaggle/MACAL_Empire_Setup.ipynb | ComfyUI + SDXL environment setup notebook | ✅ Built & validated, not yet run on Kaggle |
+| image-gen/training/ | Kohya SS LoRA training config + notebook | ✅ Built & validated, not yet run on Kaggle |
+| image-gen/comfyui/ | Generation workflow, batch runner, watermark generator | ✅ Built & tested, not yet run on Kaggle |
 
 ---
 
-*Last checkpoint: July 8, 2026 — MACAL v3 Phase 1 deployed, paused before Phase 2 (image library)*
+*Last checkpoint: July 8, 2026 — MACAL v3 Phase 1 deployed (paused before Phase 2);
+MACAL Empire image-gen pipeline fully built and tested but not yet executed on
+Kaggle by the user (see Thread 2 above)*
