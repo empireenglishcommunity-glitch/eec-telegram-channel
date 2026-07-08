@@ -5,6 +5,12 @@ Knows the EEC learning system inside-out.
 Understands the student's level from their question.
 Always provides value + CTA to join.
 
+HYBRID SYSTEM (Option C):
+1. Student message arrives
+2. Check phonics_bank.json for keyword/fuzzy match
+3. If match → serve verified answer INSTANTLY (no API call, zero latency)
+4. If no match → fall back to Groq AI with master prompt
+
 Name: MACAL
 Personality: Authoritative, direct, helpful, Egyptian masri, zero fluff.
 """
@@ -13,6 +19,7 @@ import time
 import aiohttp
 from telethon import events
 import config
+from phonics_bank_engine import find_bank_answer
 
 # Rate limiting
 REPLY_TIMESTAMPS = []
@@ -145,8 +152,8 @@ def _can_reply() -> bool:
     return len(REPLY_TIMESTAMPS) < MAX_REPLIES_PER_HOUR
 
 
-async def generate_reply(question: str) -> str | None:
-    """Generate a reply using Groq AI as MACAL."""
+async def generate_reply(question: str):
+    """Generate a reply using Groq AI as MACAL (fallback when bank has no match)."""
     if not config.GROQ_API_KEY:
         return None
 
@@ -216,12 +223,26 @@ def setup_group_listener(client):
         if not _can_reply():
             return
 
-        # Reply INSTANTLY (no artificial delay — speed = professionalism)
+        # === HYBRID SYSTEM (Option C) ===
+        # Step 1: Check phonics bank FIRST (instant, no API call)
+        bank_reply = find_bank_answer(text)
+
+        if bank_reply:
+            # Serve verified answer instantly
+            try:
+                await event.reply(bank_reply)
+                REPLY_TIMESTAMPS.append(time.time())
+                print(f"  📚 MACAL bank reply ({len(bank_reply)} chars)")
+            except Exception as e:
+                print(f"  ⚠️ MACAL bank reply error: {e}")
+            return
+
+        # Step 2: No bank match → fall back to Groq AI
         reply = await generate_reply(text)
         if reply:
             try:
                 await event.reply(reply)
                 REPLY_TIMESTAMPS.append(time.time())
-                print(f"  🏛️ MACAL replied ({len(reply)} chars)")
+                print(f"  🤖 MACAL AI reply ({len(reply)} chars)")
             except Exception as e:
-                print(f"  ⚠️ MACAL reply error: {e}")
+                print(f"  ⚠️ MACAL AI reply error: {e}")
