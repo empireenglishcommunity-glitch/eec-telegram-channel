@@ -188,13 +188,8 @@ def find_bank_answer(message: str) -> Optional[str]:
     if best_score >= CONFIDENCE_THRESHOLD and best_entry:
         answer = best_entry["answer"]
 
-        # Append the mandatory CTA if not already ending with it
-        if _bank_cta and "@macal_emperor" not in answer:
-            answer += f"\n\n{_bank_cta}"
-        elif _bank_cta and "النطق الصح محتاج ممارسة" not in answer:
-            # Answer has @macal_emperor but not the full CTA — append it
-            answer += f"\n\n{_bank_cta}"
-
+        # Answer already contains integrated CTA with @macal_emperor
+        # No need to append external CTA — it's built into each answer
         print(f"  📚 Bank match! Entry #{best_entry['id']} ({best_entry['category']}) — score: {best_score:.2f}")
         return answer
 
