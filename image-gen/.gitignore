@@ -14,6 +14,13 @@ training/output/
 # Generated output images (final brand content — sync to storage, not git)
 output/
 
+# Zipped dataset handoff artifact — regenerate via prepare_dataset.py + zip, not tracked
+dataset/curated_dataset.zip
+
+# Run logs / raw prompt dumps — ephemeral, not source
+dataset/seed_batch_run.log
+dataset/seed_prompts_output.txt
+
 # Python
 __pycache__/
 *.pyc

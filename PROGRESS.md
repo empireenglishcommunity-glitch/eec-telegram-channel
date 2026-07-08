@@ -5,6 +5,25 @@
 
 ---
 
+## 🟢 RESUME COMMAND — paste this to continue exactly where we left off
+
+```
+Read PROGRESS.md in the eec-telegram-channel repo, specifically Thread 2
+(MACAL Empire image generation). Steps 0-4 of image-gen/RUN_GUIDE.md are done:
+94 seed images generated, curated down to 76 (approved via PR #2), real
+captions written, dataset prepped and zipped to
+image-gen/dataset/curated_dataset.zip. Walk me through Step 5 — uploading
+that curated dataset to a new Kaggle session and running
+image-gen/training/MACAL_Empire_Train_LoRA.ipynb to train the brand LoRA.
+```
+
+Just paste the block above into a new session (any agent) and it will pick up
+exactly at Step 5 of the image-gen pipeline. Full detail on everything done so
+far is in the "Thread 2" section immediately below, and in
+`image-gen/dataset/CURATION-REVIEW.md` / `image-gen/RUN_GUIDE.md`.
+
+---
+
 ## ⏸️ ACTIVE WORK IN PROGRESS — READ THIS FIRST
 
 **Two parallel threads are mid-flight.** Read both before continuing:
@@ -26,17 +45,34 @@
 
 - Full research report at `docs/MACAL-EMPIRE-IMAGE-GEN-INFRASTRUCTURE.md` (self-hosted
   SDXL/FLUX + ComfyUI, hardware options, LoRA training strategy, cost estimates)
-- A complete **zero-budget implementation** (Kaggle-based) has been built and tested
-  in `image-gen/` — seed prompt generator, dataset prep script, Kaggle notebooks for
-  ComfyUI setup and Kohya SS LoRA training, ComfyUI generation workflow, batch runner,
-  watermark generator
-- **Every script was executed and tested locally during development** (unit-level:
-  workflow graph consistency, watermark compositing, dataset validation) but the
-  **user has NOT yet run this on an actual Kaggle session** — there is no trained
-  LoRA and no generated images yet
-- **When resuming:** read `image-gen/RUN_GUIDE.md` and walk through Steps 0-6 with
-  the user on a real Kaggle account. Do not rebuild what's already there — it's
-  tested and working code, just unexecuted end-to-end on live Kaggle infrastructure.
+- A complete **zero-budget implementation** (Kaggle-based) has been built in `image-gen/`
+- **Steps 0-4 of RUN_GUIDE.md are DONE:**
+  - Kaggle GPU (T4x2) set up, ComfyUI + SDXL base model installed and running (via
+    Cloudflare quick tunnel — URL changes every restart, tunnel drops every 5-10 min)
+  - **Seed generation complete:** 94/105 unique seed images generated to
+    `image-gen/dataset/raw_seed/` (gitignored, 132MB) — 11 prompts failed after retries
+    (indices 1,12,37,60-65,76,97), acceptable loss
+  - **Curation complete (agent-reviewed via 5 thumbnail contact sheets, pushed to PR #2
+    for user visual review, user approved):** 76 KEEP / 18 REJECT. Full breakdown in
+    `image-gen/dataset/CURATION-REVIEW.md`. Rejects were off-palette (grey/white studio
+    backgrounds, green damask) or off-concept (storm clouds, hourglasses on light bg).
+  - **Dataset prep complete:** real captions written for all 76 images (pulled from the
+    actual generation prompt in `seed_batch_log.csv`, NOT auto-caption placeholders) into
+    `manifest_template.csv` (tracked in git). Ran `prepare_dataset.py` →
+    `image-gen/dataset/curated/` (gitignored, 76 image+caption pairs, 1024x1024, 0 rejected
+    by validation). Zipped to `image-gen/dataset/curated_dataset.zip` (~106MB, gitignored)
+    ready for Kaggle upload.
+- **NOT yet done: Step 5 (train the LoRA) and Step 6 (generate real branded content)**
+  — no trained LoRA exists yet.
+- **When resuming:** read `image-gen/RUN_GUIDE.md` Step 5. User needs to upload
+  `curated_dataset.zip` contents to a **new** Kaggle session (as a Kaggle Dataset, ideally)
+  and run `training/MACAL_Empire_Train_LoRA.ipynb` (1-3 hrs GPU time). Compare checkpoint
+  samples every 300 steps, pick best (not necessarily last). Then load LoRA into ComfyUI
+  and generate real content via `batch_runner.py` with `--watermark`.
+- **Known recurring issue:** Kaggle's Cloudflare quick tunnel (trycloudflare.com) drops
+  every 5-10 min in long sessions — requires the 3-cell restart sequence (kill processes →
+  start ComfyUI alone, verify locally → start tunnel separately with a short delay to avoid
+  "Text file busy" race condition).
 
 ---
 
@@ -63,7 +99,7 @@
 | **MACAL v3 Phase 1 — Full phonics + brand + sales** | ✅ COMPLETE & DEPLOYED | See `docs/MACAL-V3-PLAN.md` |
 | **MACAL v3 Phase 2 — Branded image library** | 🔲 PLANNED, NOT STARTED | Resume point — see `docs/MACAL-V3-PLAN.md` |
 | **MACAL Empire self-hosted image-gen infrastructure report** | ✅ COMPLETE | Full research + implementation plan, see `docs/MACAL-EMPIRE-IMAGE-GEN-INFRASTRUCTURE.md` |
-| **MACAL Empire zero-budget image-gen pipeline (built)** | ✅ SCRIPTS BUILT & TESTED, NOT YET RUN ON KAGGLE | Kaggle-based SDXL+ComfyUI+LoRA pipeline, see `image-gen/RUN_GUIDE.md` — user has not yet executed the actual Kaggle run |
+| **MACAL Empire zero-budget image-gen pipeline** | 🟡 IN PROGRESS — Steps 0-4 done, Step 5 (LoRA training) next | Kaggle GPU set up, 94 seed images generated, curated to 76, captioned, dataset prepped & zipped (`curated_dataset.zip`). See `image-gen/RUN_GUIDE.md` — Step 5 (train LoRA on Kaggle) is the next action |
 
 **Content/posting automation (Phases A-H + Enhancements 1-4) is 100% complete.**
 **MACAL discussion-group bot is mid-enhancement — Phase 2 pending.**
@@ -144,6 +180,7 @@
 | 9 | TBD | **RESUME: MACAL v3 Phase 2** — image library | Build branded HTML→PNG infographics (gold/black Empire style) for ~15 topics, wire up topic-detection + image attachment in `group_reply_engine.py`. See `docs/MACAL-V3-PLAN.md` for full spec. | TBD |
 | 10 | 2026-07-08 | MACAL Empire image-gen research + zero-budget pipeline build | User asked for a full self-hosted image-gen infra plan for the "MACAL Empire" brand (Dark Luxury/Imperial/Cinematic). Researched and wrote full technical report (`docs/MACAL-EMPIRE-IMAGE-GEN-INFRASTRUCTURE.md`): confirmed zero GPU exists in current infra, compared FLUX vs SDXL vs ComfyUI vs A1111, LoRA training strategy, recommended reusing existing n8n as orchestrator. User then said they can't spend anything — added a Zero-Budget Path section (Kaggle free GPU, 30hrs/week). Then built the ENTIRE pipeline as working, tested code in `image-gen/`: seed prompt generator (105 prompts), dataset prep script, Kaggle setup notebook (ComfyUI), Kohya SS LoRA training config + notebook, ComfyUI generation workflow + batch runner + watermark generator, and a master `RUN_GUIDE.md`. Every script was actually executed and tested (not just written) — see commit `ed09230`. **Not yet run on actual Kaggle by the user.** | Kiro |
 | 11 | TBD | Create 5 more bots + update pinned links | Run create_more_bots.py after rate limit clears. Update pinned message when services ready. | TBD |
+| 12 | 2026-07-08 | Image-gen: seed generation + curation + dataset prep | Ran seed batch on Kaggle T4x2 (with tunnel-drop recovery logic added to `run_seed_batch.py`), got 94/105 images. Built thumbnail contact sheets (5 sheets, ~200KB each) to review all 94 without exceeding message size limits — pushed to PR #2 for user visual review on GitHub. User approved. Corrected an initial recount error (68→76 keep after re-verifying against `seed_batch_log.csv`, added missed #066). Wrote real captions from actual generation prompts (not placeholders) into `manifest_template.csv`. Ran `prepare_dataset.py`: 76/76 accepted, 0 rejected, all 1024x1024, all captions verified. Zipped `curated_dataset.zip` for Kaggle upload. Next: Step 5, LoRA training. | Kiro |
 
 ---
 
@@ -204,7 +241,11 @@
 | ~~bot/data/bank/phonics_bank.json~~ | ~~Static answer bank~~ | ❌ Deleted — do not recreate |
 | docs/MACAL-EMPIRE-IMAGE-GEN-INFRASTRUCTURE.md | Full self-hosted image-gen research report | ✅ Complete |
 | image-gen/RUN_GUIDE.md | Master step-by-step guide for the zero-budget pipeline | ✅ Active — READ BEFORE IMAGE-GEN WORK |
-| image-gen/dataset/ | Seed prompts, dataset spec, prep script | ✅ Built & tested, not yet run on Kaggle |
+| image-gen/dataset/ | Seed prompts, dataset spec, prep script | ✅ Built & tested |
+| image-gen/dataset/CURATION-REVIEW.md | Curation decision record — 76 keep / 18 reject, approved by user | ✅ Complete |
+| image-gen/dataset/manifest_template.csv | Real captions for all 76 curated images | ✅ Complete, tracked in git |
+| image-gen/dataset/curated/ (gitignored) | 76 training-ready 1024x1024 images + captions | ✅ Complete, ready for Kaggle upload |
+| image-gen/dataset/curated_dataset.zip (gitignored) | Zipped curated/ for Kaggle upload | ✅ Complete |
 | image-gen/kaggle/MACAL_Empire_Setup.ipynb | ComfyUI + SDXL environment setup notebook | ✅ Built & validated, not yet run on Kaggle |
 | image-gen/training/ | Kohya SS LoRA training config + notebook | ✅ Built & validated, not yet run on Kaggle |
 | image-gen/comfyui/ | Generation workflow, batch runner, watermark generator | ✅ Built & tested, not yet run on Kaggle |
@@ -212,5 +253,6 @@
 ---
 
 *Last checkpoint: July 8, 2026 — MACAL v3 Phase 1 deployed (paused before Phase 2);
-MACAL Empire image-gen pipeline fully built and tested but not yet executed on
-Kaggle by the user (see Thread 2 above)*
+MACAL Empire image-gen pipeline: seed generation, curation (76/94 approved), and dataset
+prep all complete. `curated_dataset.zip` ready for Kaggle upload. Next action is Step 5
+(LoRA training) in `image-gen/RUN_GUIDE.md` (see Thread 2 above).*
