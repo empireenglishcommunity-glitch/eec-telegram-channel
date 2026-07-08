@@ -29,6 +29,7 @@ from innovation_engine import (
     post_voice_challenge, maybe_add_secret_code,
     announce_audio_room, post_email_capture, post_referral
 )
+from group_reply_engine import setup_group_listener
 
 # Global client
 client: TelegramClient = None
@@ -473,6 +474,10 @@ async def start():
     await client.start(phone=config.PHONE_NUMBER)
     me = await client.get_me()
     print(f"✅ Logged in as: {me.first_name} ({me.phone})")
+
+    # Setup discussion group auto-reply listener
+    setup_group_listener(client)
+    print(f"💬 Discussion group listener active (@{config.DISCUSSION_GROUP_USERNAME})")
 
     # Setup scheduler
     scheduler = AsyncIOScheduler(timezone="Asia/Dubai")
