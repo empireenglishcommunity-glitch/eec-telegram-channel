@@ -20,3 +20,5 @@ Thumbs.db
 # Audio working files (final versions go in assets/)
 *.wav
 *.raw
+*.pyc
+__pycache__/
