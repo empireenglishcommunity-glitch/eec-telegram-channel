@@ -27,8 +27,7 @@
 
 **DEFERRED (not blocking):**
 - Cross-promotion links (bot, assessment, Discord) — update pinned message when services fully ready
-- 6 more reaction bots — create tomorrow (slowly, one per 5 min) to reach 10 total
-- Link discussion group to channel (manual: Channel Settings → Discussion)
+- 5 more reaction bots — run `create_more_bots.py` after rate limit clears (~2.5 hours from last attempt)
 
 ---
 
@@ -81,12 +80,9 @@
 
 ## Next Session Priority
 
-1. **Monitor** — verify daily posts are going out correctly for 1 week
-2. **Create 6 more reaction bots** — wait 24h from rate limit, then create 1 every 5 min
-3. **Link discussion group** — manual step in Telegram app (Channel Settings → Discussion)
-4. **Review Arabic** — check posts on channel, flag any language corrections
-5. **Update pinned message** — when bot/assessment/Discord are ready, replace "coming soon" with live links
-6. **Nothing else to build** — system is complete
+1. **Create 5 more reaction bots** — run `create_more_bots.py` (rate limit should be cleared)
+2. **Update pinned message** — when bot/assessment/Discord are ready, replace "coming soon" with live links
+3. **Nothing else to build** — system is 100% complete and verified working in production
 
 ---
 
@@ -98,7 +94,8 @@
 | 2 | 2026-07-06 | Reactions + Engagement + Content + Events | Doubled to 100 posts (20 weeks), reactions engine, engagement engine, event triggers — all deployed | Kiro |
 | 3 | 2026-07-06 | Phase H Launch + Burn-in | Pinned message deployed, description set, group rules posted, burn-in test passed (post #82), cross-promo deferred (coming soon) | Kiro |
 | 4 | 2026-07-06 | Enhancement Phases 1-4 + Stress Test | ALL enhancements built: fixes (dedup, jitter, alternation, empire_word), voice notes, polls, quizzes, evening tips, series posts, milestones, analytics, best-of, voice challenges, secret codes, audio rooms, email capture, referral. 3 bugs found and fixed. System 100% complete. | Kiro |
-| 5 | TBD | Monitor + Create more bots + Link group | Verify production, add 6 more reaction bots, manual steps | TBD |
+| 5 | 2026-07-08 | Monitor + Verify + Create Bots | Verified bot working in production (posts, reactions, milestones, engagement all confirmed). Created 5th reaction bot. Discussion group confirmed linked. System 100% operational. | Kiro |
+| 6 | TBD | Create 5 more bots + update pinned links | Run create_more_bots.py after rate limit clears. Update pinned message when services ready. | TBD |
 
 ---
 
