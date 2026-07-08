@@ -1,12 +1,28 @@
 # MACAL v3 — Full Enhancement Plan
 
-> **Status:** Phase 1 READY TO START | Phase 2 PLANNED
+> **Status:** ✅ Phase 1 COMPLETE & DEPLOYED | 🔲 Phase 2 NEXT (paused — resume here)
 > **Last Updated:** July 8, 2026
 > **Owner:** @macal_emperor (Empire English Community)
 > **Repo:** empireenglishcommunity-glitch/eec-telegram-channel
 > **Server:** Hetzner 77.42.43.250 at /opt/eec-channel-bot/
 > **Service:** systemd `eec-channel-bot`
 > **Deploy:** `cd /opt/eec-channel-bot && git pull && systemctl restart eec-channel-bot`
+
+## ⏸️ RESUME POINT (read this first if continuing)
+
+**Phase 1 is DONE and LIVE on the server.** The user paused here intentionally to work
+on something else. When they come back, **start directly on Phase 2 (Image Library)**
+— do not redo Phase 1.
+
+Latest commit: `ceef45a` — "feat: MACAL v3 — full phonics knowledge + brand + sales psychology"
+Pushed to: `main` branch, already deployed to Hetzner server (confirmed via git pull output).
+
+Before starting Phase 2, quickly verify Phase 1 is still healthy:
+```bash
+systemctl status eec-channel-bot
+journalctl -u eec-channel-bot --no-pager -n 10
+```
+Should show the service active and recent "🏛️ MACAL replied" log lines with no errors.
 
 ---
 
@@ -62,10 +78,30 @@ MACAL becomes the **most helpful English pronunciation assistant** for Arabs on 
 
 ---
 
-## Phase 1: Enhanced AI Prompt (PRIORITY — DO FIRST)
+## Phase 1: Enhanced AI Prompt — ✅ COMPLETE (July 8, 2026)
 
 ### Goal:
 Expand MACAL's knowledge from 6 sounds to FULL pronunciation coverage, add sales psychology, integrate Empire brand.
+
+### What was actually built (matches plan below):
+- ✅ Identity/brand: MACAL introduced as "الصوت الرسمي لـ Empire English Community (EEC)"
+- ✅ Core 6 rules kept STRICT and unchanged (P/B, V/F, G/J, CH/SH, TH, R)
+- ✅ Added 9 extended sound rules: W vs V, NG, Dark/Light L, Schwa /ə/, short/long vowel
+  pairs (ship/sheep, full/fool, cat/bed), -ED endings (3 forms), -S endings (3 forms),
+  D vs T at word end, silent letters, word stress
+- ✅ Added 20-word "commonly mispronounced" list (comfortable, vegetable, Wednesday, etc.)
+- ✅ Added VALIDATE → VALUE → GAP → CTA response strategy explicitly in the prompt
+- ✅ Added 30-minute free call description (bullet points) in the prompt
+- ✅ Expanded CTA variations from 3 → 5, all Arabic RTL-safe
+- ✅ Expanded example responses from 3 → 5 (core sound, extended/schwa sound,
+  difficult word, general FAQ, About Empire/EEC)
+- ✅ Fixed `_is_question()` signal gaps found during testing: added "ليه/why", "مين/who",
+  "احجز/اشترك/انضم", "كام/سعر/تكلفة", "كبير/خايف/بخاف" — tested 21 cases (13 match / 8 no-match), all pass
+- ✅ Deployed to Hetzner and confirmed live via `git pull` + `systemctl restart`
+
+### File modified: `bot/group_reply_engine.py`
+Only the `MACAL_SYSTEM_PROMPT` variable + `QUESTION_SIGNALS` list were changed.
+Rest of the code (rate limiting, `_is_question`, `generate_reply`, `setup_group_listener`) unchanged from v2.
 
 ### File to modify: `bot/group_reply_engine.py`
 Only the `MACAL_SYSTEM_PROMPT` variable needs rewriting. The rest of the code stays the same.
@@ -172,10 +208,12 @@ Only the `MACAL_SYSTEM_PROMPT` variable needs rewriting. The rest of the code st
 
 ---
 
-## Phase 2: Image Library (DO AFTER Phase 1 is stable)
+## Phase 2: Image Library — 🔲 NEXT UP (start here on resume)
 
 ### Goal:
 Attach branded Empire infographic images to relevant replies. Premium visual identity.
+
+### Status: Not started. Nothing built yet for this phase.
 
 ### Architecture:
 - Pre-made HTML templates → rendered to PNG via html2img (already in bot)
@@ -258,13 +296,27 @@ journalctl -u eec-channel-bot --no-pager -n 10
 
 | File | Purpose | Status |
 |------|---------|--------|
-| `bot/group_reply_engine.py` | Main engine (AI prompt + listener) | ✅ v2 live, v3 pending |
+| `bot/group_reply_engine.py` | Main engine (AI prompt + listener) | ✅ v3 live on server |
 | `bot/config.py` | Environment loader | ✅ No changes needed |
 | `bot/main.py` | 24/7 autopilot (imports group_reply_engine) | ✅ No changes needed |
-| `bot/templates/phonics/` | HTML templates for infographics | 🔲 Phase 2 |
-| `bot/data/images/` | Rendered PNG infographics | 🔲 Phase 2 |
+| `bot/templates/phonics/` | HTML templates for infographics | 🔲 Phase 2 — not created yet |
+| `bot/data/images/` | Rendered PNG infographics | 🔲 Phase 2 — not created yet |
 | `docs/MACAL-V3-PLAN.md` | This file | ✅ |
 
 ---
 
-*Last checkpoint: July 8, 2026 — Session with Kiro*
+## Session Log
+
+| Date | What happened | Agent |
+|------|---------------|-------|
+| Jul 8, 2026 | MACAL v1 built (basic 6-sound AI system) | Kiro |
+| Jul 8, 2026 | Attempted "Option C" hybrid bank+AI system — built, deployed | Kiro |
+| Jul 8, 2026 | Bank caused false positive (asked about D, got P answer) — user flagged as broken/embarrassing | Kiro |
+| Jul 8, 2026 | Full renovation to MACAL v2: deleted bank entirely, AI-only system, tested, deployed | Kiro |
+| Jul 8, 2026 | Brainstormed MACAL v3 (full phonics + brand + images), user approved plan, documented in this file | Kiro |
+| Jul 8, 2026 | **Phase 1 built, tested (21 cases), committed (`ceef45a`), pushed, deployed to Hetzner** | Kiro |
+| Jul 8, 2026 | User pausing to work on something else — checkpoint updated, will resume at Phase 2 | Kiro |
+
+---
+
+*Last checkpoint: July 8, 2026 — Session with Kiro — PAUSED after Phase 1, resume at Phase 2*

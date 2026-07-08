@@ -1,7 +1,25 @@
 # EEC Telegram Channel — Progress & Session Continuity
 
 > **Purpose:** Read this file FIRST at the start of every session to restore context.
-> **Last Updated:** July 6, 2026
+> **Last Updated:** July 8, 2026
+
+---
+
+## ⏸️ ACTIVE WORK IN PROGRESS — READ THIS FIRST
+
+**MACAL (discussion group AI reply bot) is mid-renovation.** See
+**`docs/MACAL-V3-PLAN.md`** for full details. Quick summary:
+
+- MACAL v1/v2/v3 all live in `bot/group_reply_engine.py`
+- Current live version: **v3, Phase 1 complete and deployed** (full phonics knowledge,
+  Empire brand integration, sales psychology, 5 CTA variations)
+- **Phase 2 (branded infographic image library) is next but NOT started** — user paused
+  intentionally to work on something else and will resume Phase 2 later
+- Do NOT rebuild the keyword-matching bank system (`phonics_bank_engine.py` /
+  `phonics_bank.json`) — it was tried, caused false positives (wrong answers), and was
+  deleted. AI-only is the correct architecture for MACAL.
+- **When resuming:** read `docs/MACAL-V3-PLAN.md` in full, verify the service is healthy,
+  then start Phase 2 (image library).
 
 ---
 
@@ -22,8 +40,14 @@
 | **Enhancement Phase 3 — Growth** | ✅ COMPLETE | Series posts, milestones, analytics, monthly report, best-of recycling |
 | **Enhancement Phase 4 — Innovation** | ✅ COMPLETE | Voice challenges, secret codes, audio room, email capture, referral |
 | **Stress Test** | ✅ COMPLETE | 3 bugs found and fixed |
+| **MACAL v1 — Basic AI reply bot** | ✅ COMPLETE | Groq AI, 6 pronunciation rules, question detection |
+| **MACAL "Option C" hybrid bank** | ❌ BUILT & REVERTED | Keyword bank caused false positives (wrong-sound answers) — fully deleted |
+| **MACAL v2 — AI-only renovation** | ✅ COMPLETE | Deleted broken bank, AI-first architecture, clean & tested |
+| **MACAL v3 Phase 1 — Full phonics + brand + sales** | ✅ COMPLETE & DEPLOYED | See `docs/MACAL-V3-PLAN.md` |
+| **MACAL v3 Phase 2 — Branded image library** | 🔲 PLANNED, NOT STARTED | Resume point — see `docs/MACAL-V3-PLAN.md` |
 
-**SYSTEM IS 100% COMPLETE. Nothing remaining to build.**
+**Content/posting automation (Phases A-H + Enhancements 1-4) is 100% complete.**
+**MACAL discussion-group bot is mid-enhancement — Phase 2 pending.**
 
 **DEFERRED (not blocking):**
 - Cross-promotion links (bot, assessment, Discord) — update pinned message when services fully ready
@@ -80,9 +104,9 @@
 
 ## Next Session Priority
 
-1. **Create 5 more reaction bots** — run `create_more_bots.py` (rate limit should be cleared)
-2. **Update pinned message** — when bot/assessment/Discord are ready, replace "coming soon" with live links
-3. **Nothing else to build** — system is 100% complete and verified working in production
+1. **Resume MACAL v3 Phase 2 (image library)** — read `docs/MACAL-V3-PLAN.md` first, this is the active work
+2. **Create 5 more reaction bots** — run `create_more_bots.py` (rate limit should be cleared)
+3. **Update pinned message** — when bot/assessment/Discord are ready, replace "coming soon" with live links
 
 ---
 
@@ -95,7 +119,11 @@
 | 3 | 2026-07-06 | Phase H Launch + Burn-in | Pinned message deployed, description set, group rules posted, burn-in test passed (post #82), cross-promo deferred (coming soon) | Kiro |
 | 4 | 2026-07-06 | Enhancement Phases 1-4 + Stress Test | ALL enhancements built: fixes (dedup, jitter, alternation, empire_word), voice notes, polls, quizzes, evening tips, series posts, milestones, analytics, best-of, voice challenges, secret codes, audio rooms, email capture, referral. 3 bugs found and fixed. System 100% complete. | Kiro |
 | 5 | 2026-07-08 | Monitor + Verify + Create Bots | Verified bot working in production (posts, reactions, milestones, engagement all confirmed). Created 5th reaction bot. Discussion group confirmed linked. System 100% operational. | Kiro |
-| 6 | TBD | Create 5 more bots + update pinned links | Run create_more_bots.py after rate limit clears. Update pinned message when services ready. | TBD |
+| 6 | 2026-07-08 | MACAL Option C hybrid bank — built, broke, reverted | Built keyword-bank + AI hybrid system, deployed. User found false positive (asked about letter D, got letter P answer) — flagged as damaging to credibility. Fully deleted bank files. | Kiro |
+| 7 | 2026-07-08 | MACAL v2 — full AI-only renovation | Rewrote `group_reply_engine.py` from scratch, AI-only (Groq), tested 19+ question-detection cases, deployed and confirmed working live. | Kiro |
+| 8 | 2026-07-08 | MACAL v3 planning + Phase 1 build | Brainstormed full phonics + brand + image plan with user, documented in `docs/MACAL-V3-PLAN.md`. Built & deployed Phase 1: expanded knowledge (14+ sounds, 20 hard words), Empire/EEC brand integration, VALIDATE→VALUE→GAP→CTA sales strategy, 5 CTA variations, 5 examples. Tested 21 question-detection cases, all pass. Committed `ceef45a`, deployed to Hetzner. | Kiro |
+| 9 | TBD | **RESUME: MACAL v3 Phase 2** — image library | Build branded HTML→PNG infographics (gold/black Empire style) for ~15 topics, wire up topic-detection + image attachment in `group_reply_engine.py`. See `docs/MACAL-V3-PLAN.md` for full spec. | TBD |
+| 10 | TBD | Create 5 more bots + update pinned links | Run create_more_bots.py after rate limit clears. Update pinned message when services ready. | TBD |
 
 ---
 
@@ -150,7 +178,11 @@
 | bot/DEPLOY.md | Deployment guide | ✅ Complete |
 | bot/.env.example | Credentials template | ✅ Complete |
 | calendar/MASTER-CALENDAR.md | Posting schedule | ⬜ Not written |
+| bot/group_reply_engine.py | MACAL — AI discussion-group reply bot (v3, Phase 1) | ✅ Live on server |
+| docs/MACAL-V3-PLAN.md | MACAL v3 full plan + resume point (Phase 2 next) | ✅ Active — READ BEFORE MACAL WORK |
+| ~~bot/phonics_bank_engine.py~~ | ~~Keyword bank matching~~ | ❌ Deleted — caused false positives, do not recreate |
+| ~~bot/data/bank/phonics_bank.json~~ | ~~Static answer bank~~ | ❌ Deleted — do not recreate |
 
 ---
 
-*Last checkpoint: Session 1, July 6, 2026*
+*Last checkpoint: July 8, 2026 — MACAL v3 Phase 1 deployed, paused before Phase 2 (image library)*
