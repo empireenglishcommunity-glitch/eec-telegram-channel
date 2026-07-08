@@ -51,6 +51,12 @@ Hetzner GEX44 dedicated server) for the best long-term cost-per-image.
 starting monthly opex during validation: **$50-150/month** (rented GPU, ~100-300
 hours of usage).
 
+**Can't spend anything right now? You don't have to.** Section 2.5 covers a true
+**$0 path**: train the brand LoRA and run manual generation batches on free Kaggle
+GPU sessions (30 hrs/week, no credit card). The only thing this can't do is run
+fully automated and unattended — that's the one piece that requires paid, always-on
+compute. Everything else in this report can be prototyped for free first.
+
 ---
 
 ## 2. Research Findings & Server Capability Assessment
@@ -141,6 +147,63 @@ This phased approach avoids the single biggest risk in this kind of project:
 spending $1,600-2,000+ upfront on hardware before confirming the model choice,
 workflow, and brand LoRA actually produce the desired "Dark Luxury / Imperial /
 Cinematic" look.
+
+### 2.5 Zero-Budget Path — Start Here If You Cannot Spend Anything Right Now
+
+**Be direct about what's actually true: a fully automated, always-on, 24/7 pipeline
+cannot be $0** — some GPU has to be running continuously, and continuous compute
+always costs something, even at the cheapest rented tier (~$50-150/month, Section 2.3).
+There is no way around this for an unattended production system.
+
+**But the two most valuable early steps — training the brand LoRA and generating
+image batches — CAN be done at $0**, using free-tier GPU platforms. The tradeoff is
+that it becomes a *manual, session-based* workflow instead of an automated one.
+
+#### Free GPU platform comparison
+
+| Platform | Free GPU | Weekly quota | Session limit | ComfyUI support |
+|---|---|---|---|---|
+| **Kaggle** | Tesla T4 or P100 (16GB VRAM) | ~30 hours/week, resets weekly | ~9-12 hours, 60-min idle timeout | Works — run ComfyUI as a background process in a notebook cell with a tunnel (e.g., Cloudflare Tunnel, ngrok) for web UI access |
+| **Google Colab (free)** | T4 (variable availability, not guaranteed), 15GB VRAM | No fixed weekly quota, but usage-based throttling if overused | ~12 hours, frequent disconnects, lower priority than paid tiers | Works — several maintained "ComfyUI on Colab" notebooks exist. **Note: AUTOMATIC1111 is explicitly blocked on Colab's free tier — use ComfyUI instead, which is unaffected.** |
+
+Sources: [Kaggle GPU usage docs — 30 hrs/week quota](https://www.kaggle.com/docs/efficient-gpu-usage),
+[Free GPU access guide 2026 — Colab vs Kaggle hours/session limits](https://www.gmicloud.ai/en/blog/best-free-gpu-cloud-options-for-ai-startups-and-researchers),
+[Kaggle LoRA fine-tuning — 30 hrs/week T4 confirmed sufficient](http://huggingface.co/spaces/joehiggi/g-gen/raw/main/docs/finetune-on-kaggle.md),
+[Colab blocks AUTOMATIC1111 on free tier](https://stable-diffusion-art.com/automatic1111-colab),
+[Run ComfyUI on Google Colab — confirmed working on free T4](https://stable-diffusion-art.com/comfyui-colab/),
+[ComfyUI-On-Colab GitHub project](https://github.com/nazdridoy/ComfyUI-On-Colab).
+
+**Recommendation for the zero-budget path: use Kaggle, not Colab, as the primary
+free platform.** Kaggle's 30 hrs/week is a guaranteed quota (not "if capacity
+allows" like Colab), and its GPU allocation has historically been more reliable.
+Colab is a reasonable backup or supplement when Kaggle's weekly quota runs out.
+
+#### What this looks like in practice
+
+| Step | Zero-budget approach |
+|---|---|
+| Train the MACAL Empire brand LoRA | Run Kohya SS or AI-Toolkit inside a Kaggle notebook. A style LoRA (Section 5) takes 1-3 hours of GPU time — comfortably inside one Kaggle session, well inside the 30 hrs/week quota. **One-time cost: $0**, just your time to set it up. |
+| Generate a batch of brand images | Run ComfyUI inside a Kaggle or Colab notebook (with a tunnel for the web UI, or drive it via the API from a local script). Load your trained LoRA + FLUX/SDXL, submit a batch of prompts, download the results before the session ends. |
+| Post-processing (upscale, watermark) | Same ComfyUI session — chain the same nodes described in Section 6.4. Nothing extra needed. |
+| Ongoing content needs | Repeat the batch-generation session whenever you need new images — e.g., once a week, aligned with your existing weekly content calendar. This becomes a manual "content generation day" instead of an automated background job. |
+| What you give up vs. the paid path | No 24/7 automation (no n8n auto-triggering jobs while you sleep), sessions can disconnect mid-run (plan for shorter batches, ~10-20 images at a time), no guaranteed instant availability (Colab especially can queue you for a GPU during peak hours) |
+
+#### When to graduate off the free tier
+
+Move to a paid rented GPU (Section 2.3) once **any** of these becomes true:
+- You need more than ~30 hours of GPU time in a given week (Kaggle's ceiling)
+- You want the pipeline to run unattended (n8n-triggered, no one at the keyboard)
+- Session disconnects are costing you more time/frustration than $50-150/month is
+  worth
+- You're ready to commit to the brand LoRA and want training/generation to be
+  instant rather than session-scheduled
+
+**Bottom line: yes, you can start today for $0.** Train the LoRA on Kaggle this
+week, run your first manual batch, and see the MACAL Empire look before spending
+a single dollar. The paid infrastructure in the rest of this report is what turns
+that proven workflow into something automated — it's an upgrade you make once
+you've validated the creative direction for free, not a prerequisite to getting
+started.
 
 
 
@@ -548,6 +611,10 @@ ComfyUI workflow graph, triggered and monitored by n8n.
 
 ## 12. Final Recommendations
 
+0. **If budget is $0 right now: start on Kaggle (Section 2.5), not the paid path.**
+   Train the brand LoRA and run manual generation batches for free. Move to paid
+   rented/owned hardware only once you need automation or exceed the free weekly
+   GPU quota.
 1. **Do the license check first** (Section 3.1 warning) — it's free and changes
    which model can safely be used for commercial brand assets.
 2. **Rent before you buy.** Validate the entire pipeline on a rented 24GB GPU for
@@ -571,19 +638,32 @@ ComfyUI workflow graph, triggered and monitored by n8n.
 
 ## 13. Immediate Next Steps
 
+### If starting at $0 (Section 2.5):
+
 1. ✅ Review this document and approve/adjust the direction (this step).
-2. Confirm FLUX.1 [dev] licensing status for commercial use (Section 3.1).
-3. Provision a RunPod or Vast.ai account and rent a 24GB GPU instance (RTX 4090 or
+2. Create a free Kaggle account (no credit card required).
+3. Curate the first 40-80 image MACAL Empire brand dataset (source, clean, caption)
+   — this is unpaid work regardless of which path you take, so it's a good first
+   task either way.
+4. Set up ComfyUI + Kohya SS (or AI-Toolkit) in a Kaggle notebook.
+5. Train the first style LoRA (start with SDXL for faster iteration cycles) inside
+   your weekly 30-hour quota.
+6. Run a manual test batch (5-10 prompts) and review output quality against brand
+   guidelines; iterate on the LoRA/dataset if needed.
+7. Repeat weekly manual generation sessions until you outgrow the free tier
+   (Section 2.5, "When to graduate") — then proceed to step 3 below.
+
+### When ready to move to paid infrastructure:
+
+1. Confirm FLUX.1 [dev] licensing status for commercial use (Section 3.1).
+2. Provision a RunPod or Vast.ai account and rent a 24GB GPU instance (RTX 4090 or
    A6000) for the validation phase.
-4. Curate the first 40-80 image MACAL Empire brand dataset (source, clean, caption).
-5. Install ComfyUI on the rented instance; download FLUX.1 and SDXL base models.
-6. Train the first style LoRA (start with SDXL for faster iteration cycles).
-7. Build and test the first end-to-end ComfyUI workflow graph (generate → upscale →
+3. Install ComfyUI on the rented instance; download FLUX.1 and SDXL base models
+   (or migrate your Kaggle-trained LoRA over — no need to retrain from scratch).
+4. Build and test the first end-to-end ComfyUI workflow graph (generate → upscale →
    watermark → save).
-8. Wire n8n to submit a small test batch (5-10 prompts) through the pipeline.
-9. Review output quality against brand guidelines; iterate on the LoRA/dataset if
-   needed.
-10. Reconvene to decide on permanent hardware (Section 11) based on real usage data.
+5. Wire n8n to submit a small test batch (5-10 prompts) through the pipeline.
+6. Reconvene to decide on permanent hardware (Section 11) based on real usage data.
 
 ---
 
