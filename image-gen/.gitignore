@@ -1,0 +1,20 @@
+# Raw and curated training images — large binaries, not portable, don't belong in git
+dataset/raw_seed/
+dataset/curated/
+
+# Model weights and checkpoints — large binaries, download via scripts instead
+models/
+*.safetensors
+*.ckpt
+*.pt
+
+# Trained LoRA outputs (until reviewed and deliberately promoted)
+training/output/
+
+# Generated output images (final brand content — sync to storage, not git)
+output/
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/

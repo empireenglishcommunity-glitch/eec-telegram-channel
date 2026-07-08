@@ -1,0 +1,4 @@
+filename,caption,category,source,curated
+example_001.png,"macalempire style, a marble column bathed in warm golden light against a near-black background, cinematic shadow",architectural,seed_generated,FALSE
+example_002.png,"macalempire style, close-up of dark velvet fabric with a thin gold thread pattern, soft studio lighting",material,seed_generated,FALSE
+example_003.png,"macalempire style, an ornate gold crown resting on black stone, dramatic single light source, deep shadow",object,seed_generated,FALSE
