@@ -1,103 +1,139 @@
 """
-Auto-reply engine for the discussion group.
-Listens to messages and replies to English-learning questions.
-Uses Groq AI to understand and respond in Egyptian Arabic.
+MACAL — Empire English Community AI Assistant.
+Lives in the discussion group. Answers questions instantly.
+Knows the EEC learning system inside-out.
+Understands the student's level from their question.
+Always provides value + CTA to join.
 
-Rules:
-- Only replies to questions (not every message)
-- Max 5 replies per hour (rate limit)
-- Responds in Egyptian masri (MACAL brand voice)
-- Short, helpful, authoritative
-- Doesn't reply to its own messages
-- Doesn't reply to forwarded posts from channel
+Name: MACAL
+Personality: Authoritative, direct, helpful, Egyptian masri, zero fluff.
 """
 import asyncio
 import time
 import aiohttp
-from datetime import datetime
 from telethon import events
 import config
 
 # Rate limiting
 REPLY_TIMESTAMPS = []
-MAX_REPLIES_PER_HOUR = 5
+MAX_REPLIES_PER_HOUR = 15  # Generous — we want engagement
 
-# Keywords that signal a question about English
+# Keywords that signal a question or discussion
 QUESTION_SIGNALS = [
-    "؟",  # Arabic question mark
-    "?",  # English question mark
-    "إزاي", "ازاي",  # how
-    "يعني إيه", "يعني ايه",  # what does it mean
-    "الفرق بين", "الفرق ما بين",  # difference between
-    "إيه معنى", "ايه معنى",  # what's the meaning
-    "بتتنطق", "بينطق", "نطق",  # pronunciation
-    "ينفع أقول", "ينفع اقول",  # can I say
-    "صح ولا غلط",  # right or wrong
-    "مش فاهم", "مش فاهمة",  # I don't understand
-    "حد يشرح", "حد يفهمني",  # someone explain
-    "ممكن حد", "ممكن أسأل",  # can someone / can I ask
+    "؟", "?",
+    "إزاي", "ازاي", "كيف",
+    "يعني إيه", "يعني ايه", "معنى",
+    "الفرق بين", "الفرق ما بين",
+    "بتتنطق", "بينطق", "نطق", "pronunciation",
+    "ينفع أقول", "ينفع اقول",
+    "صح ولا غلط", "صح ولا لا",
+    "مش فاهم", "مش فاهمة",
+    "حد يشرح", "حد يفهمني",
+    "ممكن حد", "ممكن أسأل",
+    "عايز أعرف", "عايزة أعرف",
+    "إيه رأيكم", "ايه رأيكم",
+    "محتاج مساعدة", "محتاجة مساعدة",
+    "ابدأ منين", "أبدأ منين",
+    "مستوى", "level",
+    "أحسن طريقة", "احسن طريقة",
+    "نصيحة", "tip",
+    "help", "how",
 ]
 
-# Ignore these patterns (not real questions)
+# Ignore these
 IGNORE_PATTERNS = [
-    "صباح الخير", "مساء الخير",  # greetings
-    "تمام", "شكرا", "شكرًا",  # thanks
-    "😂", "🤣", "هههه",  # laughter
+    "صباح الخير", "مساء الخير",
+    "تمام", "شكرا", "شكرًا", "thanks",
+    "😂", "🤣", "هههه", "ههه",
+    "👍", "❤️", "🔥",
+    "💬", "💡", "🗳",  # Bot's own seeded prompts
 ]
 
-SYSTEM_PROMPT = """أنت المساعد الرسمي لـ Empire English Community.
-بتجاوب على أسئلة الأعضاء عن تعلم الإنجليزي وعن النظام بتاع Empire.
+MACAL_SYSTEM_PROMPT = """أنت MACAL — المساعد الرسمي لـ Empire English Community.
+أنت مش chatbot عادي. أنت خبير تعليم إنجليزي بيفهم النظام من جوه.
 
 ═══ شخصيتك ═══
-- اسمك: مساعد Empire
-- أسلوبك: واثق، مباشر، مختصر، مفيد
-- لغتك: عامية مصرية ١٠٠٪
-- ممنوع: كلام فاضي، مقدمات، "أهلًا بيك"، "تحت أمرك"
+- اسمك: MACAL
+- أسلوبك: واثق، مباشر، ذكي، مختصر
+- لغتك: عامية مصرية ١٠٠٪ (ده/دي/اللي/عشان/بس)
+- نبرتك: زي مدرب رياضي — بيحفّزك وبيوجّهك بحزم
+- ممنوع: كلام فاضي، مقدمات، "أهلًا"، "تحت أمرك"، "إزاي أقدر أساعدك"
 
-═══ تعرف إيه عن Empire ═══
-- نظام تعليم إنجليزي للعرب — نطق أمريكي من أول يوم
-- ٤ مستويات (٠ → ٣)
-- ٧ مهام يومية (نطق، كلمات، تقليد، كلام، استماع، كتابة، مجتمع)
-- امتحان تحديد مستوى مجاني: assessment.empireenglish.online
-- مجتمع Discord فيه محادثات صوتية يومية
-- بوت التفاصيل: @EmpireEnglishBot
-- مفيش معلم — فيه نظام + ذكاء اصطناعي + مجتمع
+═══ النظام اللي بتمثّله ═══
 
-═══ لما حد يسأل عن الإنجليزي ═══
-- اشرح بإيجاز (٢-٤ سطور max)
-- لو سؤال نطق: اشرح الصوت + ادي مثال
-- لو سؤال معنى: المعنى + جملة
-- لو سؤال قواعد: القاعدة + مثال
+Empire English Community هو نظام تعليم إنجليزي كامل — مش كورس.
+- النطق الأمريكي من اليوم الأول
+- ٤ مستويات: مبتدئ (L0) → البقاء (L1) → التواصل (L2) → الطلاقة (L3)
+- ٧ مهام يومية: نطق → كلمات → تقليد → كلام → استماع → كتابة → مجتمع
+- مجتمع Discord (محادثات صوتية يومية، إنجليزي بس)
+- ذكاء اصطناعي بيقيّم النطق والكتابة
+- امتحان تحديد مستوى مجاني (TOEFL-equivalent)
+- مفيش معلم — فيه نظام + مجتمع + التزام
+- التكلفة: شبه مجانية (النظام مبني على أدوات مجانية)
 
-═══ لما حد يسأل عن Empire ═══
-- جاوب عن النظام بثقة
-- وجّهه للامتحان المجاني أو البوت
+═══ المستويات ═══
+
+Level 0 (مبتدئ): ما يعرفش حاجة أو يعرف كلمات بسيطة. محتاج الأساسيات.
+- بيتعلم: ٥٠٠ كلمة + الأصوات الـ ٤٤ + جمل بسيطة
+- مدة: ٨-١٢ أسبوع
+
+Level 1 (البقاء): بيفهم شوية بس مش بيتكلم.
+- بيتعلم: محادثات يومية + ١٥٠٠ كلمة + النبرة والربط
+- مدة: ١٠-١٤ أسبوع
+
+Level 2 (التواصل): بيتكلم بس مش بطلاقة.
+- بيتعلم: مواضيع معقدة + ٣٠٠٠ كلمة + نطق متقدم
+- مدة: ١٢-١٦ أسبوع
+
+Level 3 (الطلاقة): بيتكلم كويس بس عايز يبان أمريكي.
+- بيتعلم: صقل النطق + السرعة + الثقة الكاملة
+- مدة: مستمر
+
+═══ إزاي تجاوب ═══
+
+١. افهم مستوى السائل من سؤاله:
+   - لو بيسأل "أبدأ منين" = مبتدئ → وجّهه لامتحان المستوى
+   - لو بيسأل عن صوت معين = عنده أساس → اشرح الصوت مباشرة
+   - لو بيسأل عن قاعدة = متوسط → اشرح بإيجاز
+   - لو بيسأل عن طلاقة/سرعة = متقدم → ادّيه تمرين عملي
+
+٢. جاوب بشكل مباشر (٢-٤ سطور max)
+
+٣. ختام كل إجابة — CTA واحد من دول (اختار المناسب):
+   - "عايز تعرف مستواك؟ كلّم @macal_emperor"
+   - "ابدأ بامتحان تحديد المستوى — كلّم @macal_emperor"
+   - "عايز تنضم للنظام؟ تواصل مع @macal_emperor"
+   - "لو جاد — كلّم @macal_emperor وابدأ"
 
 ═══ ممنوع ═══
 - إجابات أطول من ٥ سطور
 - "أهلًا وسهلًا" أو "تحت أمرك" أو "أنا هنا عشان اساعدك"
-- كلام عام من غير فايدة
-- الرد بـ "ده مش تخصصي" على أي سؤال عن الإنجليزي أو عن Empire
+- "ده مش تخصصي"
+- كلام عام من غير فايدة ملموسة
+- أي إجابة من غير CTA في الآخر
 
-═══ شكل الإجابة ═══
-[الإجابة المباشرة في ٢-٤ سطور]
+═══ شكل الإجابة (ALWAYS) ═══
+[إجابة مباشرة ٢-٤ سطور]
 
-🏛️"""
+[CTA — سطر واحد يوجّه لـ @macal_emperor]
+
+🏛️ MACAL"""
 
 
 def _is_question(text: str) -> bool:
-    """Check if a message is likely a question about English or Empire."""
-    if not text or len(text) < 10:
+    """Check if a message is a question or discussion worth replying to."""
+    if not text or len(text) < 8:
         return False
 
-    # Check ignore patterns first
+    # Ignore bot's own prompts and reactions
+    first_char = text.strip()[0] if text.strip() else ""
+    if first_char in "💬💡🗳🎯💣🔥🏛️👑📢📖🎤":
+        return False
+
+    # Check ignore patterns
     for pattern in IGNORE_PATTERNS:
-        if text.strip() == pattern or text.strip().startswith(pattern):
+        if text.strip() == pattern or (len(text.strip()) < 20 and pattern in text):
             return False
-
-    # Ignore messages that are the bot's own seeded prompts
-    if text.startswith("💬") or text.startswith("💡") or text.startswith("🗳"):
-        return False
 
     # Check for question signals
     for signal in QUESTION_SIGNALS:
@@ -108,27 +144,26 @@ def _is_question(text: str) -> bool:
 
 
 def _can_reply() -> bool:
-    """Rate limit: max 5 replies per hour."""
+    """Rate limit check."""
     global REPLY_TIMESTAMPS
     now = time.time()
-    # Remove timestamps older than 1 hour
     REPLY_TIMESTAMPS = [t for t in REPLY_TIMESTAMPS if now - t < 3600]
     return len(REPLY_TIMESTAMPS) < MAX_REPLIES_PER_HOUR
 
 
 async def generate_reply(question: str) -> str | None:
-    """Generate a reply using Groq AI."""
+    """Generate a reply using Groq AI as MACAL."""
     if not config.GROQ_API_KEY:
         return None
 
     payload = {
         "model": "llama-3.3-70b-versatile",
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": MACAL_SYSTEM_PROMPT},
             {"role": "user", "content": question},
         ],
-        "temperature": 0.7,
-        "max_tokens": 300,
+        "temperature": 0.6,
+        "max_tokens": 250,
     }
 
     try:
@@ -140,14 +175,17 @@ async def generate_reply(question: str) -> str | None:
                     "Content-Type": "application/json",
                 },
                 json=payload,
-                timeout=aiohttp.ClientTimeout(total=15),
+                timeout=aiohttp.ClientTimeout(total=10),
             ) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     reply = data["choices"][0]["message"]["content"].strip()
-                    # Ensure it ends with brand mark
-                    if "🏛️" not in reply:
-                        reply += "\n\n🏛️"
+                    # Ensure it ends with MACAL brand
+                    if "MACAL" not in reply:
+                        reply += "\n\n🏛️ MACAL"
+                    # Ensure CTA is there
+                    if "@macal_emperor" not in reply:
+                        reply += "\n\nعايز تبدأ؟ كلّم @macal_emperor"
                     return reply
                 else:
                     return None
@@ -165,11 +203,11 @@ def setup_group_listener(client):
         if event.sender_id == me.id:
             return
 
-        # Don't reply to forwarded messages (channel posts)
+        # Don't reply to forwarded messages
         if event.message.fwd_from:
             return
 
-        # Don't reply to bot messages
+        # Don't reply to bots
         sender = await event.get_sender()
         if sender and getattr(sender, 'bot', False):
             return
@@ -184,16 +222,12 @@ def setup_group_listener(client):
         if not _can_reply():
             return
 
-        # Add a small random delay (20-45 sec) — looks human but fast
-        delay = __import__('random').randint(20, 45)
-        await asyncio.sleep(delay)
-
-        # Generate reply
+        # Reply INSTANTLY (no artificial delay — speed = professionalism)
         reply = await generate_reply(text)
         if reply:
             try:
                 await event.reply(reply)
                 REPLY_TIMESTAMPS.append(time.time())
-                print(f"  💬 Auto-reply sent ({len(reply)} chars)")
+                print(f"  🏛️ MACAL replied ({len(reply)} chars)")
             except Exception as e:
-                print(f"  ⚠️ Auto-reply send error: {e}")
+                print(f"  ⚠️ MACAL reply error: {e}")
