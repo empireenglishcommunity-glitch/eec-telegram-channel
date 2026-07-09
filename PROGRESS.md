@@ -9,17 +9,24 @@
 
 ```
 Read PROGRESS.md in the eec-telegram-channel repo, specifically Thread 2
-(MACAL Empire image generation). Steps 0-4 of image-gen/RUN_GUIDE.md are done:
-94 seed images generated, curated down to 76 (approved via PR #2), real
-captions written, dataset prepped and zipped to
-image-gen/dataset/curated_dataset.zip. Walk me through Step 5 — uploading
-that curated dataset to a new Kaggle session and running
-image-gen/training/MACAL_Empire_Train_LoRA.ipynb to train the brand LoRA.
+(MACAL Empire image generation). Step 5 (LoRA training) was run once already
+on Kaggle — completed all 1800 steps with zero crashes (self-healing
+supervisor + dual-GPU + NCCL fix all worked), but the RESULT failed: samples
+showed light/grey backgrounds instead of dark near-black, and weak concepts
+(e.g. "crown", never in the training captions) produced incoherent images.
+Root cause: captions mentioned "dark"/"black" inconsistently worded, diluting
+the signal. FIX ALREADY APPLIED: all 76 captions rewritten with an identical
+fixed suffix (", dark near-black background, moody low-key lighting, imperial
+luxury aesthetic") appended to every caption, re-zipped to
+image-gen/dataset/curated_dataset.zip. This has NOT been retrained yet — spin
+up a fresh Kaggle session, use the self-healing bridge + supervisor pattern
+again (see image-gen/kaggle/remote_exec_bridge.py + image-gen/training/
+train_supervisor.sh), upload the corrected zip, and retrain.
 ```
 
 Just paste the block above into a new session (any agent) and it will pick up
-exactly at Step 5 of the image-gen pipeline. Full detail on everything done so
-far is in the "Thread 2" section immediately below, and in
+exactly where we left off. Full detail on everything done so far is in the
+"Thread 2" section immediately below, and in
 `image-gen/dataset/CURATION-REVIEW.md` / `image-gen/RUN_GUIDE.md`.
 
 ---
@@ -62,17 +69,56 @@ far is in the "Thread 2" section immediately below, and in
     `image-gen/dataset/curated/` (gitignored, 76 image+caption pairs, 1024x1024, 0 rejected
     by validation). Zipped to `image-gen/dataset/curated_dataset.zip` (~106MB, gitignored)
     ready for Kaggle upload.
-- **NOT yet done: Step 5 (train the LoRA) and Step 6 (generate real branded content)**
-  — no trained LoRA exists yet.
-- **When resuming:** read `image-gen/RUN_GUIDE.md` Step 5. User needs to upload
-  `curated_dataset.zip` contents to a **new** Kaggle session (as a Kaggle Dataset, ideally)
-  and run `training/MACAL_Empire_Train_LoRA.ipynb` (1-3 hrs GPU time). Compare checkpoint
-  samples every 300 steps, pick best (not necessarily last). Then load LoRA into ComfyUI
-  and generate real content via `batch_runner.py` with `--watermark`.
-- **Known recurring issue:** Kaggle's Cloudflare quick tunnel (trycloudflare.com) drops
-  every 5-10 min in long sessions — requires the 3-cell restart sequence (kill processes →
-  start ComfyUI alone, verify locally → start tunnel separately with a short delay to avoid
-  "Text file busy" race condition).
+- **Step 5 (train the LoRA): RUN ONCE, INFRA WORKED, RESULT FAILED, FIX APPLIED, NOT YET RETRAINED.**
+  Full story:
+  - Built `image-gen/kaggle/remote_exec_bridge.py` — a stdlib-only HTTP server + Cloudflare
+    tunnel pasted into a Kaggle cell, giving the agent direct remote control (upload files,
+    run commands, poll background jobs) instead of manual copy-paste. Has a self-healing
+    tunnel watchdog (auto-restarts `cloudflared` if it dies, prints a fresh URL).
+  - Built `image-gen/training/train_supervisor.sh` — wraps `sdxl_train_network.py` in a
+    crash-recovery loop. Enabled `save_state = true` in `train_config.toml` so a crash can
+    `--resume` from the last saved step instead of restarting at 0. Applies
+    `NCCL_P2P_DISABLE=1 NCCL_IB_DISABLE=1` (Kaggle T4 pairs have no NVLink; this avoids a
+    P2P-timeout SIGKILL seen in an earlier dual-GPU attempt that crashed at step 120 with
+    no OOM error). Gives up after 8 consecutive crashes as a GPU-quota safety valve.
+  - **First real training run (2026-07-09): completed all 1800/1800 steps, ZERO crashes,
+    ~2h14min on Kaggle T4x2.** Infra fix fully validated — dual-GPU + NCCL fix + self-healing
+    supervisor held for the entire run with no intervention needed.
+  - **But the RESULT was bad.** Checked sample previews at steps 300/600/900/1200/1800
+    against corrected test prompts (matched to what's actually in the training captions,
+    not "crown" which was never present in any of the 76 captions). Backgrounds came out
+    light grey/white/cream marble instead of dark near-black — the opposite of the "Dark
+    Luxury/Imperial" brand target. Root cause: the 76 original captions DID mention
+    "dark"/"black" (71 of 76 did), but worded inconsistently every time ("near-black
+    backdrop", "matte black stone", "dark background", "darkness", etc.) — diluting the
+    signal the trigger word needed to bind to. SDXL's strong pretrained prior toward bright
+    marble/gold luxury imagery won out over an inconsistently-worded style cue.
+  - **Fix applied (2026-07-09, this session):** rewrote all 76 caption `.txt` files in
+    `image-gen/dataset/curated/` to append one identical fixed suffix to every single
+    caption: `", dark near-black background, moody low-key lighting, imperial luxury
+    aesthetic"`. Synced `manifest_template.csv` (git-tracked) and `curated/manifest.csv`
+    to match. Re-zipped to `curated_dataset.zip`, verified via a fresh unzip that all 76
+    captions contain the new suffix and none are placeholders.
+  - **NOT yet retrained with the corrected captions.** This is the next action.
+- **When resuming:** spin up a new Kaggle session, paste `remote_exec_bridge.py` into a
+  cell (via `!wget -q -O bridge.py https://raw.githubusercontent.com/.../remote_exec_bridge.py
+  && python3 bridge.py` to avoid copy-paste corruption of long f-strings — a real failure
+  mode hit once already), send the printed `BRIDGE_URL` to the agent. Agent uploads the
+  corrected `curated_dataset.zip`, installs sd-scripts, downloads SDXL base, launches
+  `train_supervisor.sh` with `NUM_PROCESSES=2` (dual-GPU). ~2-2.5 hrs. When done, check
+  samples at step 1800 against `image-gen/training/corrected_sample_prompts.txt` (5 prompts
+  matched to real training concepts, not invented ones) — look specifically for whether
+  backgrounds are now genuinely near-black, not just "less bright than before."
+- **Known recurring issues (all worked around, but resurface with any fresh Kaggle session):**
+  - Cloudflare quick tunnel (trycloudflare.com) can die silently (DNS stops resolving, no
+    warning) during long sessions — the v2 bridge's watchdog auto-restarts it, but if the
+    whole Kaggle session times out (not just the tunnel), everything must be re-uploaded
+    from scratch (dataset re-upload takes ~5s, SDXL model re-download ~1min, so this is
+    cheap to recover from — the expensive part is losing training progress, which
+    `train_supervisor.sh` now also protects against via `--resume`).
+  - Pasting the raw bridge script text directly into a Kaggle cell can corrupt long
+    f-strings during copy/paste reflow (hit this once: `SyntaxError: unterminated f-string
+    literal`) — always use the `wget` one-liner instead of pasting the full script body.
 
 ---
 
@@ -99,7 +145,7 @@ far is in the "Thread 2" section immediately below, and in
 | **MACAL v3 Phase 1 — Full phonics + brand + sales** | ✅ COMPLETE & DEPLOYED | See `docs/MACAL-V3-PLAN.md` |
 | **MACAL v3 Phase 2 — Branded image library** | 🔲 PLANNED, NOT STARTED | Resume point — see `docs/MACAL-V3-PLAN.md` |
 | **MACAL Empire self-hosted image-gen infrastructure report** | ✅ COMPLETE | Full research + implementation plan, see `docs/MACAL-EMPIRE-IMAGE-GEN-INFRASTRUCTURE.md` |
-| **MACAL Empire zero-budget image-gen pipeline** | 🟡 IN PROGRESS — Steps 0-4 done, Step 5 (LoRA training) next | Kaggle GPU set up, 94 seed images generated, curated to 76, captioned, dataset prepped & zipped (`curated_dataset.zip`). See `image-gen/RUN_GUIDE.md` — Step 5 (train LoRA on Kaggle) is the next action |
+| **MACAL Empire zero-budget image-gen pipeline** | 🟡 IN PROGRESS — Step 5 run once, infra proven, result failed, caption fix applied, retrain pending | Trained LoRA once: 1800/1800 steps, 0 crashes (self-healing bridge + supervisor both proven). But result had light backgrounds instead of dark near-black. Fixed all 76 captions with a consistent dark-background suffix, re-zipped. Next: retrain with corrected dataset. |
 
 **Content/posting automation (Phases A-H + Enhancements 1-4) is 100% complete.**
 **MACAL discussion-group bot is mid-enhancement — Phase 2 pending.**
@@ -181,6 +227,7 @@ far is in the "Thread 2" section immediately below, and in
 | 10 | 2026-07-08 | MACAL Empire image-gen research + zero-budget pipeline build | User asked for a full self-hosted image-gen infra plan for the "MACAL Empire" brand (Dark Luxury/Imperial/Cinematic). Researched and wrote full technical report (`docs/MACAL-EMPIRE-IMAGE-GEN-INFRASTRUCTURE.md`): confirmed zero GPU exists in current infra, compared FLUX vs SDXL vs ComfyUI vs A1111, LoRA training strategy, recommended reusing existing n8n as orchestrator. User then said they can't spend anything — added a Zero-Budget Path section (Kaggle free GPU, 30hrs/week). Then built the ENTIRE pipeline as working, tested code in `image-gen/`: seed prompt generator (105 prompts), dataset prep script, Kaggle setup notebook (ComfyUI), Kohya SS LoRA training config + notebook, ComfyUI generation workflow + batch runner + watermark generator, and a master `RUN_GUIDE.md`. Every script was actually executed and tested (not just written) — see commit `ed09230`. **Not yet run on actual Kaggle by the user.** | Kiro |
 | 11 | TBD | Create 5 more bots + update pinned links | Run create_more_bots.py after rate limit clears. Update pinned message when services ready. | TBD |
 | 12 | 2026-07-08 | Image-gen: seed generation + curation + dataset prep | Ran seed batch on Kaggle T4x2 (with tunnel-drop recovery logic added to `run_seed_batch.py`), got 94/105 images. Built thumbnail contact sheets (5 sheets, ~200KB each) to review all 94 without exceeding message size limits — pushed to PR #2 for user visual review on GitHub. User approved. Corrected an initial recount error (68→76 keep after re-verifying against `seed_batch_log.csv`, added missed #066). Wrote real captions from actual generation prompts (not placeholders) into `manifest_template.csv`. Ran `prepare_dataset.py`: 76/76 accepted, 0 rejected, all 1024x1024, all captions verified. Zipped `curated_dataset.zip` for Kaggle upload. Next: Step 5, LoRA training. | Kiro |
+| 13 | 2026-07-09 | Image-gen: Step 5 — LoRA training, infra fixed, first run's RESULT failed, caption fix applied | Built `remote_exec_bridge.py` (agent remote-controls Kaggle directly: upload/exec/poll/download over HTTP+Cloudflare tunnel) and `train_supervisor.sh` (crash-auto-resume via `save_state`/`--resume`, `NCCL_P2P_DISABLE=1` fix for a dual-GPU SIGKILL seen on first attempt at step 120). Tested supervisor logic locally with a fake crashing script before trusting it with real GPU time — confirmed correct resume-from-checkpoint and give-up-after-N-attempts behavior. Ran full training: 1800/1800 steps, 0 crashes, ~2h14min, dual T4. Infra fully validated. But checked sample previews at every 300-step checkpoint against prompts matched to real training concepts — backgrounds stayed light/grey/cream, not dark near-black; concepts absent from training data (e.g. "crown") produced incoherent collages. Root cause: 71/76 original captions DID mention dark/black but worded inconsistently every time, diluting the trigger word's learned association. Fix: rewrote all 76 caption .txt files with one identical fixed suffix, synced both manifest CSVs, re-zipped `curated_dataset.zip`, verified via fresh unzip. NOT yet retrained with corrected captions — that's the next action. | Kiro |
 
 ---
 
@@ -247,7 +294,10 @@ far is in the "Thread 2" section immediately below, and in
 | image-gen/dataset/curated/ (gitignored) | 76 training-ready 1024x1024 images + captions | ✅ Complete, ready for Kaggle upload |
 | image-gen/dataset/curated_dataset.zip (gitignored) | Zipped curated/ for Kaggle upload | ✅ Complete |
 | image-gen/kaggle/MACAL_Empire_Setup.ipynb | ComfyUI + SDXL environment setup notebook | ✅ Built & validated, not yet run on Kaggle |
-| image-gen/training/ | Kohya SS LoRA training config + notebook | ✅ Built & validated, not yet run on Kaggle |
+| image-gen/kaggle/remote_exec_bridge.py | Agent remote-control bridge for Kaggle (HTTP + Cloudflare tunnel, self-healing) | ✅ Built, tested, used in a real training run |
+| image-gen/training/ | Kohya SS LoRA training config + notebook | ✅ Built & validated |
+| image-gen/training/train_supervisor.sh | Self-healing training loop — auto-resume on crash via save_state/--resume | ✅ Built, tested (fake-crash harness), proven on real GPU (1800/1800 steps, 0 crashes) |
+| image-gen/training/corrected_sample_prompts.txt | 5 test prompts matched to real training captions (not invented concepts like "crown") | ✅ Complete |
 | image-gen/comfyui/ | Generation workflow, batch runner, watermark generator | ✅ Built & tested, not yet run on Kaggle |
 
 ---
