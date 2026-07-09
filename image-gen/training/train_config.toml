@@ -37,6 +37,16 @@ save_every_n_steps = 300
 # Saves a checkpoint every 300 steps so you can compare samples across
 # training progress and pick the best checkpoint rather than only the last one
 # (DATASET-SPEC.md Section 5.3: "more steps is not automatically better").
+save_state = true
+# save_state (in addition to save_every_n_steps above) saves FULL training
+# state (optimizer, step count) every checkpoint, not just the LoRA weights.
+# This is what makes crash-recovery possible: train_supervisor.sh can pass
+# --resume pointing at the latest "*-state" directory and continue training
+# from the exact step it crashed at, instead of restarting from step 0.
+# Not using save_last_n_steps_state to auto-prune old state dirs — Kaggle's
+# disk is large enough for our ~60-image dataset's handful of state saves,
+# and keeping them all avoids depending on an argument this project hasn't
+# explicitly verified against the installed sd-scripts version.
 mixed_precision = "fp16"
 gradient_checkpointing = true
 # gradient_checkpointing trades a bit of speed for a large VRAM reduction —
