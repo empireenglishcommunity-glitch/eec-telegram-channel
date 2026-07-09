@@ -21,6 +21,11 @@ dataset/curated_dataset.zip
 dataset/seed_batch_run.log
 dataset/seed_prompts_output.txt
 
+# Downloaded checkpoint sample previews used for manual quality review during
+# training — diagnostic scratch images, not a deliverable. Findings from
+# reviewing these are written up in text in PROGRESS.md / commit messages.
+training/checkpoint_previews/
+
 # Python
 __pycache__/
 *.pyc
