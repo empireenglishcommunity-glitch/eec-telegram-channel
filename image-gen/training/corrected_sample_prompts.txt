@@ -1,0 +1,5 @@
+macalempire style, grand imperial columns bathed in warm golden light, deep shadow, cinematic --w 1024 --h 1024
+macalempire style, a spiral staircase in black marble with a gold handrail, dramatic overhead light --w 1024 --h 1024
+macalempire style, portrait of a person in silhouette, rim-lit in gold against a dark imperial hallway --w 1024 --h 1024
+macalempire style, an antique gold compass on black velvet, cinematic macro shot --w 1024 --h 1024
+macalempire style, empty imperial throne room, dark walls, gold trim catching a single light source --w 1024 --h 1024
