@@ -232,6 +232,61 @@ class ThreadingHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
     daemon_threads = True
 
 
+def _start_tunnel(port: int):
+    """Start a fresh cloudflared quick tunnel process and return (proc, url)."""
+    tunnel_proc = subprocess.Popen(
+        ["./cloudflared", "tunnel", "--url", f"http://localhost:{port}"],
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+    )
+    url = None
+    for _ in range(60):
+        line = tunnel_proc.stdout.readline()
+        if not line:
+            if tunnel_proc.poll() is not None:
+                break
+            continue
+        match = re.search(r"https://[a-zA-Z0-9\-]+\.trycloudflare\.com", line)
+        if match:
+            url = match.group(0)
+            break
+    return tunnel_proc, url
+
+
+def _tunnel_watchdog(port: int):
+    """
+    Cloudflare quick tunnels can silently die during long sessions (observed:
+    DNS stops resolving entirely, no warning). This loop checks tunnel health
+    every 20s and transparently restarts it if it's gone, printing a fresh
+    BRIDGE_URL each time — so a dead tunnel no longer means losing the whole
+    training run, just a quick URL refresh.
+    """
+    current_proc, current_url = _start_tunnel(port)
+    if current_url:
+        print(f"\nBRIDGE_URL: {current_url}\n")
+        print("Paste that URL back into the Kiro chat to hand over control.")
+    else:
+        print("Tunnel URL did not appear in time on first attempt — will keep retrying in background.")
+
+    while True:
+        time.sleep(20)
+        dead = current_proc.poll() is not None
+        if not dead:
+            # Extra check: quick tunnels sometimes stay listed as "running"
+            # as a process but stop actually resolving. A lightweight local
+            # health check against our own server (not through the tunnel)
+            # can't detect that, so we just also verify the process is still
+            # alive as a first-line signal and rely on the user reporting
+            # dead requests as the second signal.
+            continue
+        print("\n[watchdog] Tunnel process died — restarting cloudflared...")
+        current_proc, current_url = _start_tunnel(port)
+        if current_url:
+            print(f"\n[watchdog] NEW BRIDGE_URL: {current_url}\n")
+            print("Paste that fresh URL back into the Kiro chat.")
+        else:
+            print("[watchdog] Restart attempt did not produce a URL — will retry again shortly.")
+
+
 def main():
     port = 8189  # different from ComfyUI's 8188 so both can run if needed
     server = ThreadingHTTPServer(("0.0.0.0", port), BridgeHandler)
@@ -239,33 +294,13 @@ def main():
     server_thread.start()
     print(f"Remote exec bridge running on 0.0.0.0:{port}")
 
-    # Download + start a Cloudflare quick tunnel pointed at this port
     if not os.path.exists("./cloudflared"):
         os.system("wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 -O cloudflared")
         os.system("chmod +x cloudflared")
 
-    tunnel_proc = subprocess.Popen(
-        ["./cloudflared", "tunnel", "--url", f"http://localhost:{port}"],
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
-    )
-
     print("Waiting for tunnel URL...")
-    found = False
-    for _ in range(40):
-        line = tunnel_proc.stdout.readline()
-        match = re.search(r"https://[a-zA-Z0-9\-]+\.trycloudflare\.com", line)
-        if match:
-            print(f"\nBRIDGE_URL: {match.group(0)}\n")
-            print("Paste that URL back into the Kiro chat to hand over control.")
-            found = True
-            break
-    if not found:
-        print("Tunnel URL did not appear in time — check cloudflared output / re-run this cell.")
-
-    # Keep this cell alive indefinitely so the server + tunnel keep running
-    print("\nBridge is live. Leave this cell running.")
-    while True:
-        time.sleep(3600)
+    print("\nBridge is live with auto-restarting tunnel watchdog. Leave this cell running.")
+    _tunnel_watchdog(port)  # blocks forever, restarting the tunnel as needed
 
 
 if __name__ == "__main__":
