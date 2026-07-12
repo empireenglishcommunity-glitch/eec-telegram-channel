@@ -1,5 +1,11 @@
 # EEC Telegram Channel — AI Agent Rules
 
+## Session Protocol
+Full session commands (`/start`, `/status`, `/sync`, `/sync dry`,
+`/checkpoint`) and standing ecosystem-wide rules live in
+`empireenglishcommunity-glitch/Kiro-Master-Index/.kiro/steering/AI-AGENT-PROTOCOL.md`.
+Read that file at the start of every session before anything below.
+
 ## Project Context
 This repository contains the content operating system for the Empire English Club Telegram Announcement Channel. It is a trust-building content machine that funnels subscribers toward the EEC assessment and paid community.
 
@@ -36,6 +42,6 @@ This repository contains the content operating system for the Empire English Clu
 ### Connected Systems (Reference)
 - Full EEC blueprint: `empireenglishcommunity-glitch/EEC-REPO/docs/strategy/Empire English Community Learning System.md`
 - Assessment system: `empireenglishcommunity-glitch/zai-placement-test`
-- Telegram bot: `empireenglishcommunity-glitch/Claude/telegram-assistant/worker.js`
-- Discord bots: `empireenglishcommunity-glitch/Claude/empire-english-bot/`
+- Telegram sales bot (n8n-based, current per Kiro-Master-Index): `@EmpireEnglishBot` — see `Kiro-Master-Index/README.md` infrastructure table. (Note: `Claude/telegram-assistant/worker.js` is a separate, older, standalone Worker-based bot of unconfirmed live status — do not assume it's the same system.)
+- Discord bots (canonical): `empireenglishcommunity-glitch/EEC-REPO/bots/discord-learning-bot/` — NOT `Claude/empire-english-bot/`, which is a confirmed-stale duplicate removed from `Claude` in the 2026-07-12 cleanup.
 - Session continuity: `empireenglishcommunity-glitch/Kiro-Master-Index/SESSION_CONTINUITY.md`
